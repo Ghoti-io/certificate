@@ -9,7 +9,7 @@
 #include "test_helpers.h"
 
 TEST(SelfTest, Passes) {
-  EXPECT_EQ(gsec_selftest(), GCERT_OK);
+  EXPECT_EQ(gcert_selftest(), GCERT_OK);
 }
 
 int main(int argc, char ** argv) {
