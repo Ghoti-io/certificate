@@ -146,6 +146,10 @@ typedef struct GCERT_X509 {
   int eku_critical;               ///< 1 when that extension was marked critical.
   int eku_unknown;                ///< 1 when it named a purpose with no bit here.
   unsigned eku;                   ///< The `GCERT_X509_EKU_*` bits it names.
+  const unsigned char * ski;      ///< subjectKeyIdentifier's key identifier, or NULL.
+  size_t ski_len;                 ///< Length of @p ski.
+  const unsigned char * aki;      ///< authorityKeyIdentifier's keyIdentifier, or NULL.
+  size_t aki_len;                 ///< Length of @p aki.
 } GCERT_X509;
 
 /**
@@ -275,6 +279,16 @@ typedef struct GCERT_X509_Tbs {
   uint32_t path_len;       ///< pathLenConstraint.
   const void * dns;        ///< One dNSName, when @p dns_len is not 0.
   size_t dns_len;          ///< Length of @p dns.
+  const void * ip;         ///< One iPAddress, 4 or 16 bytes, when @p ip_len is not 0.
+  size_t ip_len;           ///< Length of @p ip.
+  const void * uri;        ///< One uniformResourceIdentifier (ASCII), when @p uri_len is not 0.
+  size_t uri_len;          ///< Length of @p uri.
+  const void * email;      ///< One rfc822Name (ASCII), when @p email_len is not 0.
+  size_t email_len;        ///< Length of @p email.
+  const void * ski;        ///< subjectKeyIdentifier's key identifier, when @p ski_len is not 0.
+  size_t ski_len;          ///< Length of @p ski.
+  const void * aki;        ///< authorityKeyIdentifier's keyIdentifier, when @p aki_len is not 0.
+  size_t aki_len;          ///< Length of @p aki.
 } GCERT_X509_Tbs;
 
 /**
@@ -299,8 +313,10 @@ typedef struct GCERT_X509_Signer {
  * @brief Build a certificate and sign it.
  *
  * The result parses with ::gcert_x509_parse. Extensions are a critical
- * basicConstraints when @p tbs->ca is set, and one dNSName when
- * @p tbs->dns_len is not 0.
+ * basicConstraints when @p tbs->ca is set; a subjectAltName holding one entry
+ * of each of dNSName, iPAddress, uniformResourceIdentifier and rfc822Name whose
+ * length is not 0; and the subject and authority key identifiers when theirs
+ * are. Nothing else is written.
  *
  * @param out The certificate. Wiped on failure.
  * @param out_len Receives the certificate length.

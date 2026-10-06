@@ -231,6 +231,8 @@ static const unsigned char OID_RSA[] = {
 static const unsigned char OID_ED25519[] = {0x2b, 0x65, 0x70};
 static const unsigned char OID_BC[] = {0x55, 0x1d, 0x13};
 static const unsigned char OID_SAN[] = {0x55, 0x1d, 0x11};
+static const unsigned char OID_SKI[] = {0x55, 0x1d, 0x0e};
+static const unsigned char OID_AKI[] = {0x55, 0x1d, 0x23};
 static const unsigned char NULL_TLV[] = {0x05, 0x00};
 
 static int alg_for(const GCERT_X509_Signer * signer, const unsigned char ** alg,
@@ -388,11 +390,15 @@ static void add_extensions(Buf * o, const GCERT_X509_Tbs * tbs) {
     add_extension(&list, OID_BC, sizeof OID_BC, 1, &one);
     any = 1;
   }
-  if (tbs->dns_len != 0) {
+  if (tbs->dns_len != 0 || tbs->ip_len != 0 || tbs->uri_len != 0 || tbs->email_len != 0) {
     Buf name;
     size_t i;
     const unsigned char * dns = tbs->dns;
-    if (tbs->dns == NULL) {
+    const unsigned char * uri = tbs->uri;
+    const unsigned char * email = tbs->email;
+    if ((tbs->dns_len != 0 && tbs->dns == NULL) || (tbs->uri_len != 0 && uri == NULL) ||
+        (tbs->email_len != 0 && email == NULL) ||
+        (tbs->ip_len != 0 && (tbs->ip == NULL || (tbs->ip_len != 4 && tbs->ip_len != 16)))) {
       o->bad = 1;
       return;
     }
@@ -402,11 +408,57 @@ static void add_extensions(Buf * o, const GCERT_X509_Tbs * tbs) {
         return;
       }
     }
+    for (i = 0; i < tbs->uri_len; i++) {
+      if (uri[i] >= 0x80u) {
+        o->bad = 1;
+        return;
+      }
+    }
+    for (i = 0; i < tbs->email_len; i++) {
+      if (email[i] >= 0x80u) {
+        o->bad = 1;
+        return;
+      }
+    }
     memset(&name, 0, sizeof name);
-    add_tlv(&name, 0x82, dns, tbs->dns_len);
+    if (tbs->email_len != 0) {
+      add_tlv(&name, 0x81, email, tbs->email_len);
+    }
+    if (tbs->dns_len != 0) {
+      add_tlv(&name, 0x82, dns, tbs->dns_len);
+    }
+    if (tbs->uri_len != 0) {
+      add_tlv(&name, 0x86, uri, tbs->uri_len);
+    }
+    if (tbs->ip_len != 0) {
+      add_tlv(&name, 0x87, tbs->ip, tbs->ip_len);
+    }
     memset(&one, 0, sizeof one);
     add_seq(&one, &name);
     add_extension(&list, OID_SAN, sizeof OID_SAN, 0, &one);
+    any = 1;
+  }
+  if (tbs->ski_len != 0) {
+    if (tbs->ski == NULL) {
+      o->bad = 1;
+      return;
+    }
+    memset(&one, 0, sizeof one);
+    add_tlv(&one, 0x04, tbs->ski, tbs->ski_len);
+    add_extension(&list, OID_SKI, sizeof OID_SKI, 0, &one);
+    any = 1;
+  }
+  if (tbs->aki_len != 0) {
+    Buf kid;
+    if (tbs->aki == NULL) {
+      o->bad = 1;
+      return;
+    }
+    memset(&kid, 0, sizeof kid);
+    add_tlv(&kid, 0x80, tbs->aki, tbs->aki_len);
+    memset(&one, 0, sizeof one);
+    add_seq(&one, &kid);
+    add_extension(&list, OID_AKI, sizeof OID_AKI, 0, &one);
     any = 1;
   }
   if (!any) {

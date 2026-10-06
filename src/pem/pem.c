@@ -150,8 +150,11 @@ static GCERT_Result b64_decode(const unsigned char * text, size_t n,
 static const char B64[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-GCERT_Result gcert_pem_decode(const void * text, size_t text_len, void * out,
-    size_t cap, size_t * out_len, char * label, size_t label_cap) {
+/* Decode the first block at or after `start`. `end_pos` receives the offset
+ * just past its END line, `no_block` is what to return when there is none. */
+static GCERT_Result decode_from(const void * text, size_t text_len, size_t start,
+    void * out, size_t cap, size_t * out_len, char * label, size_t label_cap,
+    size_t * end_pos, GCERT_Result no_block) {
   const unsigned char * p;
   const unsigned char * begin;
   const unsigned char * end_banner;
@@ -167,7 +170,10 @@ GCERT_Result gcert_pem_decode(const void * text, size_t text_len, void * out,
   }
   p = (const unsigned char *)text;
   begin = NULL;
-  for (i = 0; i + sizeof begin_mark - 1u <= text_len; i++) {
+  if (start > text_len) {
+    return GCERT_ERR_INVALID;
+  }
+  for (i = start; i + sizeof begin_mark - 1u <= text_len; i++) {
     size_t k;
     int match = 1;
     for (k = 0; k < sizeof begin_mark - 1u; k++) {
@@ -182,7 +188,7 @@ GCERT_Result gcert_pem_decode(const void * text, size_t text_len, void * out,
     }
   }
   if (begin == NULL) {
-    return GCERT_ERR_CORRUPT;
+    return no_block;
   }
   label_len = 0;
   while ((size_t)(begin + label_len - p) + 5u <= text_len &&
@@ -243,8 +249,51 @@ GCERT_Result gcert_pem_decode(const void * text, size_t text_len, void * out,
       label[i] = (char)begin[i];
     }
   }
-  return b64_decode(p + body, (size_t)(end_banner - (p + body)),
-      (unsigned char *)out, cap, out_len);
+  {
+    GCERT_Result result = b64_decode(p + body, (size_t)(end_banner - (p + body)),
+        (unsigned char *)out, cap, out_len);
+    if (result == GCERT_OK && end_pos != NULL) {
+      *end_pos = (size_t)(end_banner - p) + sizeof end_mark - 1u + label_len + 5u;
+    }
+    return result;
+  }
+}
+
+GCERT_Result gcert_pem_decode(const void * text, size_t text_len, void * out,
+    size_t cap, size_t * out_len, char * label, size_t label_cap) {
+  return decode_from(text, text_len, 0, out, cap, out_len, label, label_cap, NULL,
+      GCERT_ERR_CORRUPT);
+}
+
+GCERT_Result gcert_pem_next(const void * text, size_t text_len, size_t * pos,
+    void * out, size_t cap, size_t * out_len, char * label, size_t label_cap) {
+  size_t end = 0;
+  GCERT_Result result;
+  if (pos == NULL) {
+    return GCERT_ERR_INVALID;
+  }
+  result = decode_from(text, text_len, *pos, out, cap, out_len, label,
+      label_cap, &end, GCERT_ERR_FORMAT);
+  if (result == GCERT_OK) {
+    *pos = end;
+  } else if (result == GCERT_ERR_CORRUPT || result == GCERT_ERR_LIMIT) {
+    /* Step over the BEGIN line of the block that failed, so that calling
+     * again finds the next one rather than the same one forever. */
+    static const char begin_mark[] = "-----BEGIN ";
+    const unsigned char * p = (const unsigned char *)text;
+    size_t i;
+    for (i = *pos; i + sizeof begin_mark - 1u <= text_len; i++) {
+      size_t k = 0;
+      while (k < sizeof begin_mark - 1u && p[i + k] == (unsigned char)begin_mark[k]) {
+        k++;
+      }
+      if (k == sizeof begin_mark - 1u) {
+        *pos = i + k;
+        break;
+      }
+    }
+  }
+  return result;
 }
 
 static GCERT_Result emit(unsigned char * out, size_t cap, size_t * used,

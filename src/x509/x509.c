@@ -857,6 +857,37 @@ static GCERT_Result policy_seq(const unsigned char * p, size_t n) {
   return GCERT_OK;
 }
 
+/* AuthorityKeyIdentifier ::= SEQUENCE { keyIdentifier [0] OCTET STRING OPTIONAL,
+ * authorityCertIssuer [1] ..., authorityCertSerialNumber [2] ... }. Only the
+ * key identifier is kept, which is what a chain builder matches on. The
+ * sequence has already been walked for shape. */
+static GCERT_Result parse_aki(const unsigned char * p, size_t n, GCERT_X509 * out) {
+  GCERT_Der seq;
+  GCERT_Result result;
+  const unsigned char * cursor;
+  size_t left;
+
+  result = whole(p, n, &seq);
+  if (result != GCERT_OK || !gcert_der_is(&seq, GCERT_DER_UNIVERSAL, 1, 16)) {
+    return GCERT_ERR_CORRUPT;
+  }
+  cursor = seq.value;
+  left = seq.value_len;
+  while (left != 0) {
+    GCERT_Der field;
+    result = gcert_der_next(&cursor, &left, &field);
+    if (result != GCERT_OK) {
+      return result;
+    }
+    if (field.tag_class == GCERT_DER_CONTEXT && field.number == 0 &&
+        field.constructed == 0 && field.value_len != 0) {
+      out->aki = field.value;
+      out->aki_len = field.value_len;
+    }
+  }
+  return GCERT_OK;
+}
+
 static GCERT_Result parse_extensions(const unsigned char * p, size_t n,
     GCERT_X509 * out) {
   GCERT_Der seq;
@@ -966,9 +997,16 @@ static GCERT_Result parse_extensions(const unsigned char * p, size_t n,
       if (result == GCERT_OK && !gcert_der_is(&ext, GCERT_DER_UNIVERSAL, 0, 4)) {
         result = GCERT_ERR_CORRUPT;
       }
+      if (result == GCERT_OK && ext.value_len != 0) {
+        out->ski = ext.value;
+        out->ski_len = ext.value_len;
+      }
     } else if (gcert_der_oid_is(&oid, OID_AKI, sizeof OID_AKI)) {
       flag = SEEN_AKI;
       result = walk_ok(value.value, value.value_len);
+      if (result == GCERT_OK) {
+        result = parse_aki(value.value, value.value_len, out);
+      }
     } else if (gcert_der_oid_is(&oid, OID_EKU, sizeof OID_EKU)) {
       flag = SEEN_EKU;
       result = parse_eku(value.value, value.value_len, critical, out);

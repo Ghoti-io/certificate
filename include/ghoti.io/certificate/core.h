@@ -89,6 +89,9 @@ GCERT_API const char * gcert_result_string(GCERT_Result result);
 /** Default ceiling on password-based derivation iterations. */
 #define GCERT_PBE_ITERATIONS_DEFAULT 10000000u
 
+/** Default for ::GCERT_Limits::max_trust_anchors. */
+#define GCERT_TRUST_ANCHORS_DEFAULT 4096u
+
 /**
  * @brief Caps on quantities a file can ask the library to spend.
  *
@@ -108,6 +111,33 @@ typedef struct GCERT_Limits {
    * thousand covers every file a tool in this decade writes.
    */
   uint32_t max_pbe_iterations;
+  /**
+   * Most anchors a ::GCERT_TrustStore holds. Default
+   * ::GCERT_TRUST_ANCHORS_DEFAULT, which is several times the size of any
+   * operating system's root list. A caller that loads a file it did not
+   * write wants this no higher than it needs. 0 means the default.
+   */
+  uint32_t max_trust_anchors;
+  /**
+   * Largest file ::gcert_trust_add_file reads, in bytes. Default 16 MiB;
+   * 0 means the default.
+   */
+  uint32_t max_trust_file_bytes;
+  /**
+   * Most certificates ::gcert_chain_build takes in its pool, the ones a peer
+   * sent. More is ::GCERT_ERR_LIMIT, not a silent truncation. Default 32;
+   * 0 means the default.
+   */
+  uint32_t max_chain_pool;
+  /**
+   * Most signature verifications and path validations one
+   * ::gcert_chain_build may spend looking for a path. A pool of
+   * cross-signed certificates has exponentially many candidate paths, and
+   * each step costs a public-key operation; this is what bounds a hostile
+   * peer. Default 256; 0 means the default. Exceeding it is
+   * ::GCERT_ERR_LIMIT.
+   */
+  uint32_t max_chain_attempts;
 } GCERT_Limits;
 
 /**

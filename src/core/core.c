@@ -32,6 +32,8 @@
 
 #include <ghoti.io/certificate/core.h>
 
+#include <string.h>
+
 const char * gcert_result_string(GCERT_Result result) {
   switch (result) {
     case GCERT_OK:
@@ -64,5 +66,10 @@ void gcert_limits_default(GCERT_Limits * limits) {
   if (!limits) {
     return;
   }
+  memset(limits, 0, sizeof *limits);
   limits->max_pbe_iterations = GCERT_PBE_ITERATIONS_DEFAULT;
+  limits->max_trust_anchors = GCERT_TRUST_ANCHORS_DEFAULT;
+  limits->max_trust_file_bytes = 16u * 1024u * 1024u;
+  limits->max_chain_pool = 32u;
+  limits->max_chain_attempts = 256u;
 }
