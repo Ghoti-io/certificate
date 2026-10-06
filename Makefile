@@ -87,11 +87,12 @@ else ifeq ($(UNAME_S), Darwin)
 	PC_LIB_DIR := $(LIB_INSTALL_PATH)/$(SUITE)
 	override BUILD := mac/$(BUILD)
 
-# TODO(windows): the Windows branches in this file were adapted from font's
-# and have never been run, nor has GCERT_API's dllexport/dllimport switching -
-# the win64 cross build in the workspace's tools/xwin/ links archives, so it
-# exercises the GCERT_STATIC arm and not those two. BCryptGenRandom itself has
-# run; see src/random/random.c. Check list: notes/suite/WINDOWS-TODO.md.
+# TODO(windows): the Windows branches in this file were adapted from
+# security's, which were adapted from font's, and have never been run for this
+# library, nor has GCERT_API's dllexport/dllimport switching. The workspace's
+# tools/xwin/ cross-builds and runs security under wine and does not include
+# this library yet; when it does, its archive link takes the GCERT_STATIC arm,
+# so the DLL arms still would not run. Check list: notes/suite/WINDOWS-TODO.md.
 else ifeq ($(findstring MINGW32_NT,$(UNAME_S)),MINGW32_NT)
 	OS_NAME := Windows
 	LIB_EXTENSION := dll
