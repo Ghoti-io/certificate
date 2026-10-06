@@ -2,14 +2,17 @@
 
 Certificates and keys in C: strict DER, PEM, PKCS#8, PKCS#12, X.509 with
 path validation and issuance, a certificate revocation list, and a basic
-OCSP response. The cryptography under them is
-[security](https://github.com/Ghoti-io/security)'s. Fetching a list or a
+OCSP response; and what a verifier builds on them: a trust store, path
+building from whatever a peer sent, name verification as RFC 9525 has it,
+the revocation checks a verifier applies, private keys that sign by scheme,
+and what a certificate says about who holds it. The cryptography under them
+is [security](https://github.com/Ghoti-io/security)'s. Fetching a list or a
 response, and a handshake, are not here.
 
 This library began as the certificate half of `security`: the code was moved
 out of it on 2026-10-06 without a change in behaviour, tests and fixtures with
 it. `security` is the primitives layer and this is what is built on it. What
-this library adds to that code is in [Status](#status).
+this library has added since is in [Status](#status).
 
 ## What it reads and writes
 
@@ -23,10 +26,16 @@ next to the function.
 | PEM | The first block in, and one block out. |
 | PKCS#8 | An unencrypted key, or PBES2. PBES1 is opened so an old key can be read. A new encrypted key is PBES2 with AES. |
 | PKCS#12 | A PFX, and it must carry a MacData: an archive with none is unauthenticated and is refused. A new encrypted bag is PBES2 with AES. The older schemes are opened so an old archive can be read. |
-| X.509 | One certificate, a signature check, a path, and a name match. The caller supplies the chain and the time. The path refuses MD5 and SHA-1, an RSA key below 2048 bits, and an expired anchor, and checks the leaf's extendedKeyUsage against a purpose the caller names. It does not check revocation. |
-| Issuance | A certificate signed with P-256, P-384, Ed25519, or RSA. |
-| CRL | Parse, check the signature, and look up a serial. Fetching the list stays with the caller. |
-| OCSP | A basic response, with `producedAt`, `thisUpdate` and `nextUpdate`, because a signed response with no visible age can be replayed. Fetching it, judging its freshness, and a delegated responder all stay with the caller. |
+| X.509 | One certificate, a signature check, and a path the caller has already arranged, at a time the caller supplies. The path refuses MD5 and SHA-1, an RSA key below 2048 bits, and an expired anchor, and checks the leaf's extendedKeyUsage against a purpose the caller names. |
+| Issuance | A certificate signed with P-256, P-384, Ed25519, or RSA, carrying a basicConstraints, a subjectAltName with a name, an address, a URI and a mailbox, and the key identifiers. |
+| Trust store | A set of anchors, from DER, a PEM bundle, a file, or the operating system's list (a file on Unix, the ROOT store on Windows), found by subject with the key identifiers breaking ties. A bundle load counts what it could not read and carries on. |
+| Path building | From a peer's chain in any order, with extras and gaps: the trust anchors first, then the pool, every candidate that reaches an anchor handed to the path check, whose verdict is the answer. The pool and the search are bounded. A refusal says why. |
+| Names | RFC 9525: a DNS name, an IP address, a URI, a mailbox. A wildcard is the whole leftmost label and matches one, and needs two labels after the star. The common name is not read unless asked. |
+| CRL | Parse, check the signature, look up a serial, and check it for a certificate: the right issuer, allowed to sign, fresh. |
+| OCSP | A basic response, with `producedAt`, `thisUpdate` and `nextUpdate`. Checked for a certificate: the right issuer or a delegated responder that is authorised, fresh, and a status that is not unknown. |
+| Revocation decision | Several pieces of evidence, or none, reduced to go on or refuse. Hard fail by default; soft fail is the caller's choice. |
+| Keys | A private key from PKCS#8, or PEM (PKCS#8, encrypted, PKCS#1, SEC1), that signs with a named scheme and is wiped when freed; and the check of a signature against a certificate's key. |
+| Identity | Every subjectAltName entry, and the attributes of a subject or issuer name. Reports; the policy is the caller's. |
 
 A critical extension the parser does not understand is rejected. The
 pointers in a parsed result address the caller's buffer.
@@ -35,13 +44,17 @@ pointers in a parsed result address the caller's buffer.
 
 - Results are `GCERT_Result`. The primitives under this library return `GSEC_Result`, and nothing here hands one to the caller: a signature that does not verify is `GCERT_ERR_MISMATCH`, and `GCERT_OK` is the only success. The two enums have the same members, and `src/core/sec_result.h` is the one place one becomes the other.
 - `gcert_x509_path` is where a trust policy lives: MD5 and SHA-1 links, RSA keys below `GCERT_X509_RSA_MIN_BITS`, and an anchor outside its own validity period are `GCERT_ERR_UNSUPPORTED` or `GCERT_ERR_MISMATCH` there, while `gcert_x509_signed_by` still verifies a weak signature so an old certificate can be identified before it is refused. Pass a `GCERT_X509_EKU_*` purpose, or check it yourself with `gcert_x509_purpose`: without one, a certificate issued for e-mail is a valid TLS certificate as far as the path is concerned.
-- `gcert_x509_path` takes exactly one anchor. A trust store that holds many is planned and is not here yet.
-- `gcert_x509_hostname` compares ASCII, and a name that is not ASCII does not match. Turning an internationalised name into its A-label is the caller's.
+- `gcert_x509_path` takes exactly one anchor and an ordered path, **anchor's side first**. A verifier has a store and a peer's chain in any order: that is `gcert_chain_build`, and its answer is `gcert_x509_path`'s.
+- A path says the chain is good. It does not say the certificate is for the host you meant: `gcert_x509_verify_host` does, and a client needs both. It does not say the certificate is not revoked: `gcert_crl_check` and `gcert_ocsp_check` look at evidence the caller fetched, and `gcert_revocation_verdict` is where "no usable evidence" becomes a decision, **refuse** unless the policy says otherwise.
+- Names compare ASCII, and a name that is not ASCII is `GCERT_ERR_INVALID`. Turning an internationalised name into its A-label is the caller's. `*.co.uk` is a wildcard that matches `a.co.uk`: there is no public-suffix list here.
+- Loading the operating system's roots only enumerates them. A bundle is read leniently (the entries this library cannot parse are counted, three of the 150 in Debian's, all ECDSA with a digest of another size than the curve's), and what the platform keeps beside its list is not carried over.
+- A zero in a `GCERT_Limits` field added since the first release means the default, so a struct filled field by field by older code stays valid.
 - `NULL` for an allocator is cutil's default. `NULL` for limits is `gcert_limits_default`, which caps a password-based derivation at `GCERT_PBE_ITERATIONS_DEFAULT` iterations. That is the cap to lower when the files come from outside: the iteration count is in the file, and the default ceiling is about nine seconds of CPU.
 - A successful `gcert_pkcs8_decrypt` is not an integrity check. PBES2 with a CBC cipher, and every PBES1 scheme, has no MAC.
 - A zero length is success and does not read the pointers. A null pointer with a positive length is `GCERT_ERR_INVALID`.
 - `gcert_result_string` returns one of a fixed set of static strings. There is no function that prints a key.
-- `gcert_selftest` runs a known answer for DER and a PEM round trip. The parsers with no writer have their known answers in the vector files.
+- `gcert_selftest` runs a known answer for DER, a PEM round trip, an IPv6 literal, and the revocation decision. The parsers with no writer have their known answers in the vector files.
+- A `GCERT_Key` holds secret bytes in one allocation and wipes them when freed or when a load fails; the PEM loader wipes what it decoded. An RSA key is checked at load by signing and verifying, because a damaged PKCS#8 file can still parse.
 
 ## Examples
 
@@ -63,6 +76,36 @@ int main(void) {
 It prints nothing. A zero exit status is the self-test succeeding. The
 programs under `examples/` each read one format and print what they found;
 `make check-oracle` runs them against OpenSSL.
+
+What a client does with a server's certificate, in order. Nothing here
+fetches, and nothing here decides what the time is. `examples/verify.c` is the
+first half of this as a program (`verify chain.pem www.example.com`), and
+builds with `make examples`:
+
+```c
+GCERT_TrustStore * store;
+GCERT_Chain chain;
+
+gcert_trust_new(NULL, NULL, &store);
+gcert_trust_add_system(store, NULL, NULL);
+
+/* leaf and pool are the DER the peer sent; now is the caller's clock. */
+if (gcert_chain_build(store, leaf, leaf_len, pool, pool_lens, pool_count, now,
+        GCERT_X509_EKU_SERVER_AUTH, NULL, &chain) != GCERT_OK) {
+  /* chain.failure says why: unknown issuer, bad signature, expired, ... */
+}
+GCERT_X509 cert;
+gcert_x509_parse(leaf, leaf_len, &cert);
+if (gcert_x509_verify_host(&cert, "www.example.com", 15, NULL) != GCERT_OK) {
+  /* the certificate is good and is for someone else */
+}
+/* Evidence the caller fetched, if any, and the decision: */
+GCERT_Revocation evidence[2];
+gcert_ocsp_check(&ocsp, &issuer, NULL, &cert, now, NULL, &evidence[0]);
+if (gcert_revocation_verdict(evidence, 1, NULL) != GCERT_OK) {
+  /* revoked, or no usable answer and the policy is hard fail (the default) */
+}
+```
 
 ## Compile and link
 
@@ -123,9 +166,13 @@ Everything is prefixed `gcert_` / `GCERT_`, under
 `<ghoti.io/certificate/...>`. `<ghoti.io/certificate/certificate.h>` is the
 umbrella.
 
-- **`der.h`**, **`pem.h`** — the two encodings everything else sits on.
+- **`der.h`**, **`pem.h`** — the two encodings everything else sits on. `gcert_pem_next` walks a bundle.
 - **`pkcs8.h`**, **`pkcs12.h`** — a private key, and an archive holding one.
 - **`x509.h`**, **`crl.h`**, **`ocsp.h`** — a certificate, a revocation list, and a response.
+- **`trust.h`**, **`chain.h`** — a set of anchors, and a path from a peer's certificates to one.
+- **`names.h`**, **`identity.h`** — whether a certificate names what you were given, and who it names.
+- **`revocation.h`** — the checks that make a CRL or an OCSP response count, and the decision.
+- **`key.h`** — a private key that signs by scheme, and the matching check for a certificate.
 - **`selftest.h`** — `gcert_selftest`.
 - **`allocator.h`** — `GCERT_Allocator`, which is cutil's `GCU_Allocator`.
 - **`core.h`** — the result codes and `GCERT_Limits`.
@@ -151,37 +198,53 @@ program that links `ghoti.io-certificate-0` links these too.
 
 ## Status
 
-The code is `security`'s certificate code as it stood at `security` commit
-`7c810c2`, moved without a change in behaviour: the same sources with the
-prefix changed, the same tests and fixtures, the same fuzz corpora, the same
-vector files. `make test` is 72 tests and nine gates, `make test-asan` and
-`make test-valgrind` are clean, `make check-oracle` agrees with OpenSSL 3.5.7,
-and every fuzz harness runs from its seed without a trap.
+On 2026-10-06 the code was `security`'s certificate code as it stood at
+`security` commit `7c810c2`, moved without a change in behaviour. The same day
+it gained the pieces a TLS verifier needs, in the order the workspace's
+`planning/tls.md` lists them: a trust store, path building, names as RFC 9525
+has them, identity extraction, the revocation checks and their decision, and
+keys that sign by scheme. The record, with what each step measured and found, is
+`notes/certificate/STATUS.md` in the workspace.
+
+What is measured: `make test` is 162 tests in 19 binaries and nine gates;
+`make test-asan` and `make test-valgrind` are clean; `make check-oracle`
+agrees with OpenSSL 3.5.7 except where a difference is declared (see
+[oracles.md](documentation/oracles.md)); twelve fuzz harnesses run from their
+seeds without a trap; `make coverage` is 82.3% of 4,547 lines, the new files
+86% to 97%; the library exports 56 functions.
+
+What building the new pieces found in code that was already here, all fixed:
+the documented order of `gcert_x509_path`'s intermediates was backwards (a
+caller who followed it got a refusal); the signature algorithm and the ECDSA
+unwrapping were parsed twice and now once; three of the 150 roots in Debian's
+bundle (a P-384 key with an ECDSA-SHA-256 signature) were reported as corrupt
+when they are well-formed and unsupported; a CERTIFICATE block with no body
+ended a whole bundle load, found by the fuzzer in under a second; an RSA key
+with a damaged private exponent parsed and then signed garbage; and
+`host_ok` on the pattern and the `sig_key` check, the two items the
+`security` audit left open, turned out to be unobservable by answer, and are
+respectively removed with the reason in the code and tested by what they
+read.
 
 What differs from `security`: the result type is `GCERT_Result`, with its own
-conversion from `GSEC_Result` and a test that the two enums stay in step;
-`GCERT_Limits` holds the one cap that moved (`max_pbe_iterations`); and
+conversion from `GSEC_Result` and a test that the two enums stay in step, and
 `security`'s constant-time gate is not carried over, because it drives
-`gsec_equal` and the primitives and none of the code that moved is among them.
-`pbes2.c` has a `GCERT_CT_TEST` branch around its padding check that nothing
-drives under memcheck, which was true in `security` too and is recorded in
-`notes/certificate/` in the workspace as work to do.
+`gsec_equal` and the primitives and none of the code that moved. `pbes2.c`
+has a `GCERT_CT_TEST` branch around its padding check that nothing drives under
+memcheck, which was true in `security` too.
 
-Planned, in the order it is planned, in the workspace's `planning/tls.md`: a
-trust store that holds many anchors and reads the operating system's, chain
-building, name verification as RFC 9525 has it (including a minimum label
-count for a wildcard), peer identity extraction for mutual TLS, revocation
-policy over the bytes this library parses, and key loading that returns a
-signing object.
+Not here, and recorded as open in
+[documentation/design.md](documentation/design.md) section 7: ECDSA with a
+digest of another size than the curve's (it needs a verify over a caller's
+digest in `security`), building an OCSP request, the macOS keychain, and the
+constant-time gate.
 
-The Windows branches ran once, on 2026-10-06: the workspace's
+The Windows branches ran on 2026-10-06: the workspace's
 `tools/xwin/certificate.sh` cross-builds this library's DLL and archive with its
-own Makefile and runs all 72 tests under wine, and requires a planted defect to
-fail the same run. That is not a Windows machine. It did find one defect that
-Linux did not (a test comparing two enums, in a template from a system header,
-which GCC does not report), and it has not run `GCERT_API`'s dllimport arm,
-`make install` into `/mingw64`, or real MSYS2; the Makefile's `TODO(windows)`
-marker says which.
+own Makefile and runs every test under wine, including the root-store
+enumeration, and requires a planted defect to fail the same run. That is not a
+Windows machine. It has not run `GCERT_API`'s dllimport arm, `make install`
+into `/mingw64`, or real MSYS2; the Makefile's `TODO(windows)` marker says which.
 
 ## License
 

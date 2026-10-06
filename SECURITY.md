@@ -25,15 +25,31 @@ the answer arrives before the effort does.
   decision rather than a caller's.
 - **A successful `gcert_pkcs8_decrypt` is not an integrity check.** PBES2 with
   a CBC cipher, and every PBES1 scheme, has no MAC. See pkcs8.h.
-- **Revocation is the caller's.** `gcert_x509_path` does not fetch a CRL or an
-  OCSP response, and does not check one it was not given.
-- **Freshness is the caller's.** `gcert_ocsp_status` reports what the response
-  says; comparing `this_update` and `next_update` against a clock is the
-  caller's job, and a replayed response is a caller bug rather than a library
-  one.
-- **`gcert_x509_path` takes one anchor and compares ASCII names.** A set of
-  anchors, and internationalised names, are the caller's until the library
-  grows them.
+- **Revocation needs evidence the caller fetched.** `gcert_x509_path` and
+  `gcert_chain_build` check no CRL or OCSP response. `gcert_crl_check` and
+  `gcert_ocsp_check` check what they are given, and `gcert_revocation_verdict`
+  **refuses when there is none**, unless the policy says soft fail. An answer
+  that is not about this issuer, is not signed by someone allowed to sign it,
+  or is past `nextUpdate` is not evidence, and is reported as unusable and not
+  as good. There is no OCSP nonce: a stapled response needs none, and a fetched
+  one is the caller's to protect.
+- **A chain is not a name.** A path that validates says the certificate is
+  good, not that it is for the host you meant. `gcert_x509_verify_host` is the
+  other half, and a client needs both.
+- **There is no public-suffix list.** `*.co.uk` matches `a.co.uk`, as it does
+  in OpenSSL. The label count rule stops `*.com`.
+- **The common name is not a host name.** It is read only if the caller sets
+  `common_name_fallback`, which RFC 9525 removed.
+- **A trust bundle is read leniently.** What this library cannot parse is
+  counted in `skipped` and the load goes on, because an operating system's
+  bundle always has a few. Check the count if you need to be strict.
+- **The operating system's list is enumerated, not trusted blindly.** What the
+  platform keeps beside it (distrust dates, per-purpose restrictions) is not
+  carried over, and the path validation is this library's own.
+- **Names compare ASCII.** A name that is not is `GCERT_ERR_INVALID`; turning
+  an internationalised name into its A-label is the caller's.
+- **A key in memory is not hidden.** `GCERT_Key` wipes its bytes on free; it is
+  not locked and not guarded against a process that can read memory.
 
 ## Things that are not deliberate
 
@@ -46,6 +62,11 @@ Worth a report, and the shapes most likely to matter here:
 - A malformed certificate, CRL, OCSP response, PKCS#8 key or PKCS#12 archive
   that is *accepted*. `tests/unit/test_negative.cpp` is where a case like that
   belongs, and one that survives those sweeps is exactly the report wanted.
-- A chain that `gcert_x509_path` validates and should not.
+- A chain that `gcert_x509_path` validates and should not, or one that
+  `gcert_chain_build` returns that `gcert_x509_path` would refuse (`fuzz_chain`
+  checks exactly that).
+- A name that `gcert_x509_verify_*` matches and should not, or a malformed
+  `subjectAltName` that is accepted or silently shortened.
 - A password-based derivation that runs longer than `GCERT_Limits` says it may.
-- A secret left in a buffer the library owned after it returned.
+- A secret left in a buffer the library owned after it returned, including a
+  private key after `gcert_key_free` or a failed load.
