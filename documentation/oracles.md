@@ -9,6 +9,20 @@ and an OCSP response, and this library reads them. A difference fails the
 target. A comparison the probe skips is a failure, and an encoding with an
 outside judge that the probe never asks about is a failure.
 
+Past the encodings, `make check-oracle` runs differentials on populations it
+makes, and each has a short list of *declared* differences: a disagreement
+that is not on the list fails, and a declared difference that no longer
+happens fails too, because a list that describes nothing is how a rule gets
+dropped without anyone deciding to.
+
+| Comparison | Population | Declared differences |
+| --- | --- | --- |
+| Names (`-checkhost`, `-checkip`, `-checkemail`) | A DNS name, wildcard, common-name and address certificate against about forty references each | A partial wildcard (`f*.example`), which OpenSSL matches and RFC 9525 does not; an absolute name (trailing dot), which this library treats as the same name and OpenSSL refuses |
+| IP literals (Python's `ipaddress`) | Fifty valid and invalid IPv4 and IPv6 texts, parsed bytes compared. OpenSSL's command line cannot judge this: it prints "does match" for text it cannot parse | A zone id (`fe80::1%eth0`), which Python reads and a certificate has no use for |
+| Chains (`openssl verify`) | A root, two intermediates and a leaf, with reorderings, extras, a missing link, an unknown root, expired and not-yet-valid certificates, a re-issue, a pathLen violation, name constraints, extended key usage, a non-CA signer, an impostor, an expired anchor | 1024-bit RSA and SHA-1 links, which this library refuses and OpenSSL's default level does not; a cross-signed intermediate where the usable one comes after the unusable one, which this library finds and OpenSSL does not go back for |
+| Signatures | Every scheme `key.h` has, on a fresh key of each kind: this library signs and OpenSSL verifies, OpenSSL signs and this library verifies, and a damaged signature is refused by both | None |
+| Revocation (`openssl verify -crl_check`, `openssl ocsp`) | A CA with a good and a revoked leaf; a CRL and a CRL with a damaged signature; OCSP good, revoked, unknown, delegated, a responder with no OCSP signing, another CA of the same name, another CA's responder | None |
+
 The primitives under these encodings are judged in `security`, against
 OpenSSL and Wycheproof there. This library does not carry Wycheproof: none of
 its data is a signature or a cipher test vector.

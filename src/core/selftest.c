@@ -36,6 +36,8 @@
 #include <ghoti.io/certificate/selftest.h>
 #include <ghoti.io/security/secret.h>
 
+#include <string.h>
+
 #include "sec_result.h"
 
 GCERT_Result gcert_selftest(void) {
@@ -84,6 +86,23 @@ GCERT_Result gcert_selftest(void) {
     if (result != GCERT_OK || got_len != 16 ||
         gcert_from_gsec(gsec_equal(got, want, 16)) != GCERT_OK) {
       return result == GCERT_OK ? GCERT_ERR_INTERNAL : result;
+    }
+  }
+  /* A wildcard names exactly one label: a SubjectAltName of *.example.com. */
+  {
+    static const unsigned char san[] = {
+      0x30, 0x0f, 0x82, 0x0d, '*', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm'
+    };
+    GCERT_X509 cert;
+
+    memset(&cert, 0, sizeof cert);
+    cert.san = san;
+    cert.san_len = sizeof san;
+    cert.dns_san = 1;
+    if (gcert_x509_verify_dns(&cert, "www.example.com", 15, NULL) != GCERT_OK ||
+        gcert_x509_verify_dns(&cert, "example.com", 11, NULL) != GCERT_ERR_MISMATCH ||
+        gcert_x509_verify_dns(&cert, "a.b.example.com", 15, NULL) != GCERT_ERR_MISMATCH) {
+      return GCERT_ERR_INTERNAL;
     }
   }
   /* The revocation decision: revoked refuses, good accepts, nothing refuses

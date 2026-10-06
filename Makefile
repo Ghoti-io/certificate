@@ -842,8 +842,17 @@ oracle-build: ## Build the pinned openssl image
 oracle-version: ## Print which reference would answer, and fail if none would
 	@GHOTI_ORACLE_REQUIRED=1 $(ORACLE_RUN) openssl -- true
 
-check-oracle: $(APP_DIR)/examples/x509$(EXE_EXTENSION) 		$(APP_DIR)/examples/pem$(EXE_EXTENSION) 		$(APP_DIR)/examples/pkcs8$(EXE_EXTENSION) 		$(APP_DIR)/examples/pkcs12$(EXE_EXTENSION) 		$(APP_DIR)/examples/crl$(EXE_EXTENSION) 		$(APP_DIR)/examples/ocsp$(EXE_EXTENSION) 		$(APP_DIR)/examples/der$(EXE_EXTENSION) ## Fail if OpenSSL and this library disagree
-	@GHOTI_ORACLE_REQUIRED=1 		GCERT_X509_BIN="$(APP_DIR)/examples/x509$(EXE_EXTENSION)" 		GCERT_PEM_BIN="$(APP_DIR)/examples/pem$(EXE_EXTENSION)" 		GCERT_PKCS8_BIN="$(APP_DIR)/examples/pkcs8$(EXE_EXTENSION)" 		GCERT_PKCS12_BIN="$(APP_DIR)/examples/pkcs12$(EXE_EXTENSION)" 		GCERT_CRL_BIN="$(APP_DIR)/examples/crl$(EXE_EXTENSION)" 		GCERT_OCSP_BIN="$(APP_DIR)/examples/ocsp$(EXE_EXTENSION)" 		GCERT_DER_BIN="$(APP_DIR)/examples/der$(EXE_EXTENSION)" 		$(ORACLE_RUN) openssl -- python3 $(ORACLE)/openssl_kat.py
+check-oracle: $(APP_DIR)/examples/x509$(EXE_EXTENSION) 		$(APP_DIR)/examples/pem$(EXE_EXTENSION) 		$(APP_DIR)/examples/pkcs8$(EXE_EXTENSION) 		$(APP_DIR)/examples/pkcs12$(EXE_EXTENSION) 		$(APP_DIR)/examples/crl$(EXE_EXTENSION) 		$(APP_DIR)/examples/ocsp$(EXE_EXTENSION) 		$(APP_DIR)/examples/der$(EXE_EXTENSION) \
+		$(APP_DIR)/examples/names$(EXE_EXTENSION) \
+		$(APP_DIR)/examples/chain$(EXE_EXTENSION) \
+		$(APP_DIR)/examples/signature$(EXE_EXTENSION) \
+		$(APP_DIR)/examples/revoke$(EXE_EXTENSION) ## Fail if OpenSSL and this library disagree
+	@GHOTI_ORACLE_REQUIRED=1 		GCERT_X509_BIN="$(APP_DIR)/examples/x509$(EXE_EXTENSION)" 		GCERT_PEM_BIN="$(APP_DIR)/examples/pem$(EXE_EXTENSION)" 		GCERT_PKCS8_BIN="$(APP_DIR)/examples/pkcs8$(EXE_EXTENSION)" 		GCERT_PKCS12_BIN="$(APP_DIR)/examples/pkcs12$(EXE_EXTENSION)" 		GCERT_CRL_BIN="$(APP_DIR)/examples/crl$(EXE_EXTENSION)" 		GCERT_OCSP_BIN="$(APP_DIR)/examples/ocsp$(EXE_EXTENSION)" 		GCERT_DER_BIN="$(APP_DIR)/examples/der$(EXE_EXTENSION)" \
+		GCERT_NAMES_BIN="$(APP_DIR)/examples/names$(EXE_EXTENSION)" \
+		GCERT_CHAIN_BIN="$(APP_DIR)/examples/chain$(EXE_EXTENSION)" \
+		GCERT_SIGNATURE_BIN="$(APP_DIR)/examples/signature$(EXE_EXTENSION)" \
+		GCERT_REVOKE_BIN="$(APP_DIR)/examples/revoke$(EXE_EXTENSION)" \
+				$(ORACLE_RUN) openssl -- python3 $(ORACLE)/openssl_kat.py
 
 
 ####################################################################
