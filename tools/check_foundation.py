@@ -216,6 +216,8 @@ def main():
         "gcert_trust_new", "gcert_trust_free", "gcert_trust_count",
         "gcert_trust_add_der", "gcert_trust_add_pem", "gcert_trust_add_file",
         "gcert_trust_add_system", "gcert_trust_get", "gcert_trust_find_issuers", "gcert_chain_build",
+        "gcert_crl_check", "gcert_ocsp_check", "gcert_revocation_policy_default",
+        "gcert_revocation_verdict",
     }
     clean = classify(present, rows)
     if clean:

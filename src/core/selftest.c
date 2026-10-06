@@ -32,6 +32,7 @@
 #include <ghoti.io/certificate/der.h>
 #include <ghoti.io/certificate/names.h>
 #include <ghoti.io/certificate/pem.h>
+#include <ghoti.io/certificate/revocation.h>
 #include <ghoti.io/certificate/selftest.h>
 #include <ghoti.io/security/secret.h>
 
@@ -83,6 +84,25 @@ GCERT_Result gcert_selftest(void) {
     if (result != GCERT_OK || got_len != 16 ||
         gcert_from_gsec(gsec_equal(got, want, 16)) != GCERT_OK) {
       return result == GCERT_OK ? GCERT_ERR_INTERNAL : result;
+    }
+  }
+  /* The revocation decision: revoked refuses, good accepts, nothing refuses
+   * unless the policy says otherwise. */
+  {
+    GCERT_Revocation good = {GCERT_REVOCATION_GOOD, GCERT_REVOCATION_NONE, 0};
+    GCERT_Revocation bad = {GCERT_REVOCATION_REVOKED, GCERT_REVOCATION_NONE, 0};
+    GCERT_Revocation both[2];
+    GCERT_RevocationPolicy soft;
+
+    gcert_revocation_policy_default(&soft);
+    soft.soft_fail = 1;
+    both[0] = good;
+    both[1] = bad;
+    if (gcert_revocation_verdict(&good, 1, NULL) != GCERT_OK ||
+        gcert_revocation_verdict(both, 2, &soft) != GCERT_ERR_MISMATCH ||
+        gcert_revocation_verdict(NULL, 0, NULL) != GCERT_ERR_MISMATCH ||
+        gcert_revocation_verdict(NULL, 0, &soft) != GCERT_OK) {
+      return GCERT_ERR_INTERNAL;
     }
   }
   return GCERT_OK;

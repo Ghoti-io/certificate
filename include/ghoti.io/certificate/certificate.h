@@ -43,6 +43,7 @@
 #include <ghoti.io/certificate/pem.h>
 #include <ghoti.io/certificate/pkcs12.h>
 #include <ghoti.io/certificate/pkcs8.h>
+#include <ghoti.io/certificate/revocation.h>
 #include <ghoti.io/certificate/trust.h>
 #include <ghoti.io/certificate/selftest.h>
 #include <ghoti.io/certificate/x509.h>
