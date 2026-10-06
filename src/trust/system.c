@@ -88,6 +88,12 @@ GCERT_Result gcert_trust_add_system(GCERT_TrustStore * store, size_t * added,
 
 #include <unistd.h>
 
+/* TODO(macos): macOS keeps its roots in the keychain, and the list that is
+ * trusted for TLS is not the file at /etc/ssl/cert.pem (which carries the
+ * system roots, and is what LibreSSL and curl read). Reading the keychain is
+ * Security.framework and cannot be built or run here; until it is, this reads
+ * the file. Path validation stays this library's either way. */
+
 static const char * const BUNDLES[] = {
   "/etc/ssl/certs/ca-certificates.crt",
   "/etc/pki/tls/certs/ca-bundle.crt",

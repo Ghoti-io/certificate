@@ -91,7 +91,7 @@ else ifeq ($(UNAME_S), Darwin)
 # security's, which were adapted from font's. They have run once, on
 # 2026-10-06: the workspace's tools/xwin/certificate.sh cross-builds the DLL
 # and the archive with them, under a shim that makes the container answer
-# MINGW64_NT, and runs all 72 tests under wine. That is an imitation of MSYS2
+# MINGW64_NT, and runs every unit test under wine, the root-store enumeration included. That is an imitation of MSYS2
 # and wine is not Windows. What has not run: GCERT_API's dllimport arm, since
 # the tests link the archive and take the GCERT_STATIC arm; `make install` into
 # /mingw64; and a real MSYS2. Check list: notes/suite/WINDOWS-TODO.md.
