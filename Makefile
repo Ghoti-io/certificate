@@ -812,8 +812,13 @@ $(eval $(call fuzz-rule,fuzz_pkcs12,pkcs12))
 $(eval $(call fuzz-rule,fuzz_crl,crl))
 $(eval $(call fuzz-rule,fuzz_ocsp,ocsp))
 $(eval $(call fuzz-rule,fuzz_x509,x509))
+$(eval $(call fuzz-rule,fuzz_names,names))
+$(eval $(call fuzz-rule,fuzz_identity,identity))
+$(eval $(call fuzz-rule,fuzz_trust,trust))
+$(eval $(call fuzz-rule,fuzz_chain,chain))
+$(eval $(call fuzz-rule,fuzz_key,key))
 
-FUZZERS := crl der ocsp pem pkcs12 pkcs8 x509
+FUZZERS := chain crl der identity key names ocsp pem pkcs12 pkcs8 trust x509
 
 fuzz: $(addprefix fuzz-run-,$(FUZZERS)) ## Build and run every fuzzer
 

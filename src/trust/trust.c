@@ -158,7 +158,16 @@ static int is_certificate_label(const char * label, size_t n) {
 static GCERT_Result add_counted(GCERT_TrustStore * s, const void * der, size_t len,
     size_t * added, size_t * skipped) {
   size_t before = s->n;
-  GCERT_Result result = gcert_trust_add_der(s, der, len);
+  GCERT_Result result;
+  if (len == 0) {
+    /* A block with nothing in it: unusable, like any other that does not
+     * decode. gcert_trust_add_der calls this INVALID, which is the right name
+     * for a caller passing nothing and the wrong one for a file that holds an
+     * empty block, and it stopped a whole bundle load. */
+    (*skipped)++;
+    return GCERT_OK;
+  }
+  result = gcert_trust_add_der(s, der, len);
   if (result == GCERT_ERR_CORRUPT || result == GCERT_ERR_UNSUPPORTED ||
       (result == GCERT_ERR_LIMIT && len > GCERT_X509_DER_MAX)) {
     (*skipped)++;

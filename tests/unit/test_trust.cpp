@@ -142,6 +142,20 @@ TEST(Trust, BundleSkipsWhatIsNotACertificateAndCountsWhatIsBroken) {
   EXPECT_EQ(gcert_trust_add_pem(st.s, nullptr, 4, nullptr, nullptr), GCERT_ERR_INVALID);
 }
 
+TEST(Trust, AnEmptyBlockIsSkippedNotFatal) {
+  /* Found by the fuzzer: a CERTIFICATE block with no body decodes to zero
+   * bytes, which add_der calls INVALID, and that ended the whole load. */
+  Bytes a = pki::root("a", pki::key(11));
+  std::string bundle = "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n" + pem_of(a) +
+      "-----BEGIN CERTIFICATE-----\n\n-----END CERTIFICATE-----\n";
+  Store st;
+  size_t added = 99;
+  size_t skipped = 99;
+  EXPECT_EQ(gcert_trust_add_pem(st.s, bundle.data(), bundle.size(), &added, &skipped), GCERT_OK);
+  EXPECT_EQ(added, 1u);
+  EXPECT_EQ(skipped, 2u);
+}
+
 TEST(Trust, BundleStopsWhenFull) {
   GCERT_Limits limits;
   gcert_limits_default(&limits);
