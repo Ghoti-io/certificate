@@ -134,6 +134,7 @@ SELFTEST_EXCLUDED = {
     "x509": "parses and issues; issuance needs a key and a clock",
     "crl": "parses only; its known answer is a fixture",
     "ocsp": "parses only; its known answer is a fixture",
+    "key": "loads and signs; its known answers are the signature round trips in test_key.cpp against signatures OpenSSL wrote (tests/data/keys)",
     "chain": "a search whose verdict is gcert_x509_path's; its tests build hierarchies",
     "trust": "a container of caller-supplied certificates; nothing here has a known answer of its own",
 }
@@ -217,7 +218,9 @@ def main():
         "gcert_trust_add_der", "gcert_trust_add_pem", "gcert_trust_add_file",
         "gcert_trust_add_system", "gcert_trust_get", "gcert_trust_find_issuers", "gcert_chain_build",
         "gcert_crl_check", "gcert_ocsp_check", "gcert_revocation_policy_default",
-        "gcert_revocation_verdict",
+        "gcert_revocation_verdict", "gcert_x509_verify_signature",
+        "gcert_key_from_pkcs8", "gcert_key_from_pem", "gcert_key_free", "gcert_key_kind",
+        "gcert_key_matches", "gcert_key_scheme_fits", "gcert_key_sign",
     }
     clean = classify(present, rows)
     if clean:

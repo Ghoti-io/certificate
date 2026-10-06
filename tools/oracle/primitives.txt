@@ -20,4 +20,5 @@ ip	implemented	self	-
 trust	implemented	self	-
 chain	implemented	self	-
 revocation	implemented	self	-
+key	implemented	self	-
 ssh_cert	excluded	none	-
