@@ -131,7 +131,6 @@ def declarations():
 SELFTEST_EXCLUDED = {
     "pkcs8": "parses only; its known answers are pkcs8.vec and the fixtures",
     "pkcs12": "parses only; a PFX in the library would be 1.5 KB of fixture",
-    "x509": "parses and issues; issuance needs a key and a clock",
     "crl": "parses only; its known answer is a fixture",
     "ocsp": "parses only; its known answer is a fixture",
     "key": "loads and signs; its known answers are the signature round trips in test_key.cpp against signatures OpenSSL wrote (tests/data/keys)",
