@@ -459,20 +459,25 @@ TEST(Key, EveryAllocationMayFail) {
     if (p) f->live--;
     std::free(p);
   };
-  auto run = [&](Counter * ctr, GCERT_Key ** out) -> GCERT_Result {
-    GCERT_Allocator a = {ctr, m, c, r, fr};
-    return gcert_key_from_pem(&a, pem.data(), pem.size(), nullptr, 0, nullptr, out);
+  /* The allocator outlives the key, as key.h says it must: the key keeps the
+   * pointer to free itself with. (An earlier version declared it inside the
+   * lambda and ASan, correctly, reported the free reading a dead stack frame.) */
+  GCERT_Allocator probe_alloc = {&probe, m, c, r, fr};
+  auto run = [&](Counter * ctr, GCERT_Allocator * al, GCERT_Key ** out) -> GCERT_Result {
+    al->ctx = ctr;
+    return gcert_key_from_pem(al, pem.data(), pem.size(), nullptr, 0, nullptr, out);
   };
   GCERT_Key * k = nullptr;
-  ASSERT_EQ(run(&probe, &k), GCERT_OK);
+  ASSERT_EQ(run(&probe, &probe_alloc, &k), GCERT_OK);
   EXPECT_EQ(probe.live, 1u);       /* the key, and nothing else */
   gcert_key_free(k);              /* uses the allocator inside the key */
   EXPECT_EQ(probe.live, 0u);
   for (size_t i = 1; i <= probe.calls; i++) {
     Counter f;
     f.fail_at = i;
+    GCERT_Allocator al = {&f, m, c, r, fr};
     GCERT_Key * kk = nullptr;
-    EXPECT_EQ(run(&f, &kk), GCERT_ERR_OOM) << "failing allocation " << i;
+    EXPECT_EQ(run(&f, &al, &kk), GCERT_ERR_OOM) << "failing allocation " << i;
     EXPECT_EQ(kk, nullptr);
     EXPECT_EQ(f.live, 0u) << "leak after failing allocation " << i;
   }
