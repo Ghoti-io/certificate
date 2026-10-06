@@ -23,14 +23,13 @@
  *
  * An X.509 certificate and a path check, as RFC 5280 specifies them.
  *
- * This lives here until a certificates library takes it. It does not
- * depend on anything but the primitives in this library. The time is a
+ * It does not depend on anything but the primitives in `security`. The time is a
  * Unix second the caller already decided, not a chron instant. A DNS
  * name is compared as stored: internationalized names are the caller's
  * to turn into A-labels. Revocation is not checked. A critical extension
  * this parser does not understand is rejected. certificatePolicies is
- * read and not enforced. PKCS#12 is not a certificate and is not read
- * here.
+ * read and not enforced. Matching a certificate to a name is names.h.
+ * PKCS#12 is not a certificate and is not read here.
  *
  * The pointers in the result address the certificate the caller passed
  * in, except an ECDSA signature, which is copied into the result so the
@@ -233,12 +232,14 @@ GCERT_API GCERT_Result gcert_x509_purpose(const GCERT_X509 * cert,
     unsigned purpose);
 
 /**
- * @brief Match a DNS name against the certificate.
+ * @brief Match a DNS name against the certificate, with the common-name fallback.
  *
- * subjectAltName dNSName entries are tried when any are present.
- * Otherwise the common name is tried. A wildcard is only the entire
- * leftmost label. The comparison is ASCII case-insensitive. A name that
- * is not ASCII does not match.
+ * This is ::gcert_x509_verify_dns with the defaults and
+ * ::GCERT_NameOptions::common_name_fallback set, kept for callers that
+ * predate names.h: subjectAltName dNSName entries are tried when any are
+ * present, and otherwise the common name. A wildcard is only the entire
+ * leftmost label and needs at least ::GCERT_NAME_WILDCARD_MIN_LABELS labels
+ * after it. New code calls ::gcert_x509_verify_host.
  *
  * @return ::GCERT_OK, ::GCERT_ERR_MISMATCH, or ::GCERT_ERR_INVALID.
  */

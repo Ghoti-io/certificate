@@ -30,6 +30,7 @@
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/der.h>
+#include <ghoti.io/certificate/names.h>
 #include <ghoti.io/certificate/pem.h>
 #include <ghoti.io/certificate/selftest.h>
 #include <ghoti.io/security/secret.h>
@@ -68,6 +69,20 @@ GCERT_Result gcert_selftest(void) {
     }
     if (result != GCERT_OK) {
       return result;
+    }
+  }
+  /* An IPv6 literal with a `::` and a trailing IPv4, RFC 4291 section 2.2. */
+  {
+    static const unsigned char want[16] = {
+      0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 0, 2, 1
+    };
+    unsigned char got[16];
+    size_t got_len = 0;
+
+    result = gcert_ip_parse("2001:db8::ffff:192.0.2.1", 24, got, &got_len);
+    if (result != GCERT_OK || got_len != 16 ||
+        gcert_from_gsec(gsec_equal(got, want, 16)) != GCERT_OK) {
+      return result == GCERT_OK ? GCERT_ERR_INTERNAL : result;
     }
   }
   return GCERT_OK;

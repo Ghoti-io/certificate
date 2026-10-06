@@ -260,6 +260,46 @@ TEST(X509Policy, SignatureAlgorithmMustMatchIssuerKey) {
   EXPECT_EQ(gcert_x509_signed_by(&pl, &pc), GCERT_ERR_MISMATCH);
 }
 
+/* The signature-algorithm to issuer-key check in gcert_x509_signed_by cannot
+ * be told apart from its absence by an answer: a signature made for one key
+ * kind is never a valid signature for another, so without the check the call
+ * still says MISMATCH, only after handing the other kind's verifier bytes it
+ * was not made for. What does tell them apart is the read. The fields are a
+ * public struct, so a caller (or a parser bug) can pair a 3-byte "RSA
+ * signature" with a P-256 issuer, and the ECDSA verifier reads 64 bytes from
+ * the signature. Under `make test-asan` that is a heap overflow when the check
+ * is gone, which is what this test is for; under `make test` it only checks
+ * the answer. The audit recorded the check as untestable, and by the answer it
+ * is. */
+TEST(X509Policy, KindMismatchIsRefusedBeforeTheVerifierReadsTheSignature) {
+  struct Kind {
+    uint32_t key;
+    size_t point_len;
+  };
+  const Kind issuers[] = {{GCERT_X509_P256, 64}, {GCERT_X509_P384, 96},
+      {GCERT_X509_ED25519, 32}};
+  for (const Kind & k : issuers) {
+    std::vector<unsigned char> tbs(8, 0x30);
+    std::vector<unsigned char> sig(3, 0x01);        /* sized to the heap exactly */
+    std::vector<unsigned char> point(k.point_len, 0x02);
+    GCERT_X509 cert;
+    GCERT_X509 issuer;
+    std::memset(&cert, 0, sizeof cert);
+    std::memset(&issuer, 0, sizeof issuer);
+    cert.tbs = tbs.data();
+    cert.tbs_len = tbs.size();
+    cert.sig_key = GCERT_X509_RSA;
+    cert.sig_hash = GSEC_RSA_SHA256;
+    cert.sig = sig.data();
+    cert.sig_len = sig.size();
+    issuer.key = k.key;
+    issuer.point = point.data();
+    issuer.point_len = point.size();
+    EXPECT_EQ(gcert_x509_signed_by(&cert, &issuer), GCERT_ERR_MISMATCH)
+        << "issuer kind " << k.key;
+  }
+}
+
 /* --- The hostname matcher's refusals -------------------------------------- */
 
 TEST(X509Policy, WildcardPatternsThatMustNotMatch) {
@@ -276,7 +316,6 @@ TEST(X509Policy, WildcardPatternsThatMustNotMatch) {
   const Case refused[] = {
     /* A `*` that is not the whole leading label is not a wildcard. */
     {"san-wild-mid.der", "www.example.com"},
-    {"san-wild-mid.der", "w*w.example.com"},
     /* Two wildcards: the second is not special, and the first covers one
      * label only. */
     {"san-wild-two.der", "a.b.example.com"},
@@ -292,22 +331,24 @@ TEST(X509Policy, WildcardPatternsThatMustNotMatch) {
     EXPECT_EQ(gcert_x509_hostname(&parsed, c.host, std::strlen(c.host)),
         GCERT_ERR_MISMATCH) << c.fixture << " matched " << c.host;
   }
-
-  /* `host_ok` is applied to the pattern as well, and that arm cannot be
-   * reached with a distinguishing input: the same malformed name offered as
-   * the host is refused first, below, so a pattern-side rejection never
-   * decides an answer on its own. Noted rather than tested, because a test
-   * that cannot fail is worse than none. */
+  /* A caller cannot ask for a name with a `*` in it: that is not a name. */
+  {
+    auto der = load("san-wild-mid.der");
+    GCERT_X509 parsed;
+    ASSERT_EQ(gcert_x509_parse(der.data(), der.size(), &parsed), GCERT_OK);
+    EXPECT_EQ(gcert_x509_hostname(&parsed, "w*w.example.com", 15),
+        GCERT_ERR_INVALID);
+  }
 }
 
-TEST(X509Policy, WildcardTldStillMatchesOneLabel) {
-  /* Recorded rather than endorsed: `*.com` matches `example.com` here,
-   * because this matcher applies no minimum label count. No CA issues such a
-   * name. If that policy changes, this is the test to change with it. */
+TEST(X509Policy, WildcardTldNamesNothing) {
+  /* This was recorded as accepted until names.h gave the matcher a minimum
+   * label count: `*.com` matched `example.com` because nothing counted the
+   * labels after the star. See test_names.cpp for the count itself. */
   auto der = load("san-wild-tld.der");
   GCERT_X509 parsed;
   ASSERT_EQ(gcert_x509_parse(der.data(), der.size(), &parsed), GCERT_OK);
-  EXPECT_EQ(gcert_x509_hostname(&parsed, "example.com", 11), GCERT_OK);
+  EXPECT_EQ(gcert_x509_hostname(&parsed, "example.com", 11), GCERT_ERR_MISMATCH);
   EXPECT_EQ(gcert_x509_hostname(&parsed, "a.example.com", 13),
       GCERT_ERR_MISMATCH);
   EXPECT_EQ(gcert_x509_hostname(&parsed, "com", 3), GCERT_ERR_MISMATCH);

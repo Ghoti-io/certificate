@@ -43,6 +43,7 @@ IMAGE = "localhost/ghoti-certificate-oracle-openssl:3.5.7"
 FOUNDATION = {
     "gcert_allocator_default",
     "gcert_limits_default",
+    "gcert_name_options_default",
     "gcert_result_string",
     "gcert_selftest",
     "gcert_version_number",
@@ -206,7 +207,10 @@ def main():
         "gcert_crl_parse", "gcert_crl_signed_by", "gcert_crl_contains",
         "gcert_ocsp_parse", "gcert_ocsp_signed_by", "gcert_ocsp_status",
         "gcert_x509_parse", "gcert_x509_signed_by", "gcert_x509_path",
-        "gcert_x509_hostname", "gcert_x509_issue",
+        "gcert_x509_hostname", "gcert_x509_issue", "gcert_ip_parse",
+        "gcert_x509_verify_dns", "gcert_x509_verify_ip",
+        "gcert_x509_verify_uri", "gcert_x509_verify_email",
+        "gcert_x509_verify_host",
     }
     clean = classify(present, rows)
     if clean:

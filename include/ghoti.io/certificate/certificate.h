@@ -37,6 +37,7 @@
 #include <ghoti.io/certificate/crl.h>
 #include <ghoti.io/certificate/der.h>
 #include <ghoti.io/certificate/macros.h>
+#include <ghoti.io/certificate/names.h>
 #include <ghoti.io/certificate/ocsp.h>
 #include <ghoti.io/certificate/pem.h>
 #include <ghoti.io/certificate/pkcs12.h>

@@ -45,6 +45,7 @@
 #define GCERT_Crl GHOTIIO_CERTIFICATE(GCERT_Crl)
 #define GCERT_Der GHOTIIO_CERTIFICATE(GCERT_Der)
 #define GCERT_Limits GHOTIIO_CERTIFICATE(GCERT_Limits)
+#define GCERT_NameOptions GHOTIIO_CERTIFICATE(GCERT_NameOptions)
 #define GCERT_Ocsp GHOTIIO_CERTIFICATE(GCERT_Ocsp)
 #define GCERT_Pkcs12 GHOTIIO_CERTIFICATE(GCERT_Pkcs12)
 #define GCERT_Pkcs8 GHOTIIO_CERTIFICATE(GCERT_Pkcs8)
@@ -58,7 +59,9 @@
 #define gcert_crl_parse GHOTIIO_CERTIFICATE(gcert_crl_parse)
 #define gcert_crl_signed_by GHOTIIO_CERTIFICATE(gcert_crl_signed_by)
 #define gcert_der_tlv GHOTIIO_CERTIFICATE(gcert_der_tlv)
+#define gcert_ip_parse GHOTIIO_CERTIFICATE(gcert_ip_parse)
 #define gcert_limits_default GHOTIIO_CERTIFICATE(gcert_limits_default)
+#define gcert_name_options_default GHOTIIO_CERTIFICATE(gcert_name_options_default)
 #define gcert_ocsp_parse GHOTIIO_CERTIFICATE(gcert_ocsp_parse)
 #define gcert_ocsp_signed_by GHOTIIO_CERTIFICATE(gcert_ocsp_signed_by)
 #define gcert_ocsp_status GHOTIIO_CERTIFICATE(gcert_ocsp_status)
@@ -78,6 +81,11 @@
 #define gcert_x509_path GHOTIIO_CERTIFICATE(gcert_x509_path)
 #define gcert_x509_purpose GHOTIIO_CERTIFICATE(gcert_x509_purpose)
 #define gcert_x509_signed_by GHOTIIO_CERTIFICATE(gcert_x509_signed_by)
+#define gcert_x509_verify_dns GHOTIIO_CERTIFICATE(gcert_x509_verify_dns)
+#define gcert_x509_verify_email GHOTIIO_CERTIFICATE(gcert_x509_verify_email)
+#define gcert_x509_verify_host GHOTIIO_CERTIFICATE(gcert_x509_verify_host)
+#define gcert_x509_verify_ip GHOTIIO_CERTIFICATE(gcert_x509_verify_ip)
+#define gcert_x509_verify_uri GHOTIIO_CERTIFICATE(gcert_x509_verify_uri)
 
 /// @endcond
 

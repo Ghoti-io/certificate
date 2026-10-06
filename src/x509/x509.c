@@ -72,7 +72,6 @@ static const unsigned char OID_ECDSA_SHA384[] = {
   0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03
 };
 static const unsigned char OID_ED25519[] = {0x2b, 0x65, 0x70};
-static const unsigned char OID_CN[] = {0x55, 0x04, 0x03};
 static const unsigned char OID_BC[] = {0x55, 0x1d, 0x13};
 static const unsigned char OID_KU[] = {0x55, 0x1d, 0x0f};
 static const unsigned char OID_SAN[] = {0x55, 0x1d, 0x11};
@@ -520,62 +519,6 @@ static int dns_in(const unsigned char * name, size_t nn, const unsigned char * b
     return 1;
   }
   return 0;
-}
-
-static int host_ok(const unsigned char * name, size_t n) {
-  size_t i;
-  int label = 0;
-  if (n == 0 || n > 253) {
-    return 0;
-  }
-  for (i = 0; i < n; i++) {
-    unsigned char c = name[i];
-    if (c == '.') {
-      if (label == 0) {
-        return 0;
-      }
-      label = 0;
-      continue;
-    }
-    if (c < 0x20 || c >= 0x7f) {
-      return 0;
-    }
-    label++;
-    if (label > 63) {
-      return 0;
-    }
-  }
-  return label != 0;
-}
-
-static int host_match(const unsigned char * host, size_t hn,
-    const unsigned char * pat, size_t pn) {
-  size_t i;
-  if (!host_ok(pat, pn)) {
-    return 0;
-  }
-  if (pn >= 2 && pat[0] == '*' && pat[1] == '.') {
-    for (i = 2; i < pn; i++) {
-      if (pat[i] == '*') {
-        return 0;
-      }
-    }
-    for (i = 0; i < hn; i++) {
-      if (host[i] == '.') {
-        break;
-      }
-    }
-    if (i == 0 || i == hn) {
-      return 0;
-    }
-    return dns_eq(host + i, hn - i, pat + 1, pn - 1);
-  }
-  for (i = 0; i < pn; i++) {
-    if (pat[i] == '*') {
-      return 0;
-    }
-  }
-  return dns_eq(host, hn, pat, pn);
 }
 
 static GCERT_Result dn_suffix(const unsigned char * name, size_t name_len,
@@ -1307,15 +1250,16 @@ GCERT_Result gcert_x509_signed_by(const GCERT_X509 * cert, const GCERT_X509 * is
   if (cert == NULL || issuer == NULL || cert->tbs == NULL || issuer->key == 0) {
     return GCERT_ERR_INVALID;
   }
-  /* Belt and braces, and deliberately not testable from outside: every
-   * mismatch this catches would also fail the verification it skips, because
-   * the signature for one key type is never a well-formed signature for
-   * another - an RSA signature is the modulus length and a raw ECDSA one is
-   * two coordinates. Removing it does not change any answer, which is why no
-   * test covers it. It stays because dispatching on the issuer's key while
-   * ignoring what the certificate says it was signed with is the shape that
-   * algorithm-confusion bugs are made of. parse_tbs separately requires the
-   * inner and outer AlgorithmIdentifiers to agree. */
+  /* Every mismatch this catches would also fail the verification it skips,
+   * because a signature for one key kind is never a valid signature for
+   * another, so no answer tells the check from its absence. What differs is
+   * the read: the other kind's verifier is handed signature bytes it was not
+   * sized for. test_x509_policy.cpp pairs a 3-byte "RSA signature" with an EC
+   * issuer, which `make test-asan` reports as an overflow without this.
+   * Dispatching on the issuer's key while ignoring what the certificate says
+   * it was signed with is the shape that algorithm-confusion bugs are made
+   * of. parse_tbs separately requires the inner and outer
+   * AlgorithmIdentifiers to agree. */
   if (cert->sig_key != issuer->key) {
     return GCERT_ERR_MISMATCH;
   }
@@ -1513,104 +1457,4 @@ GCERT_Result gcert_x509_purpose(const GCERT_X509 * cert, unsigned purpose) {
     return GCERT_OK;
   }
   return GCERT_ERR_MISMATCH;
-}
-
-static GCERT_Result match_cn(const GCERT_X509 * cert, const unsigned char * host,
-    size_t host_len) {
-  GCERT_Der name;
-  GCERT_Result result;
-  const unsigned char * p;
-  size_t left;
-
-  result = whole(cert->subject, cert->subject_len, &name);
-  if (result != GCERT_OK) {
-    return result;
-  }
-  p = name.value;
-  left = name.value_len;
-  while (left != 0) {
-    GCERT_Der rdn;
-    const unsigned char * rp;
-    size_t rleft;
-    result = gcert_der_next(&p, &left, &rdn);
-    if (result != GCERT_OK) {
-      return result;
-    }
-    rp = rdn.value;
-    rleft = rdn.value_len;
-    while (rleft != 0) {
-      GCERT_Der atv;
-      GCERT_Der oid;
-      GCERT_Der val;
-      const unsigned char * ap;
-      size_t aleft;
-      result = gcert_der_next(&rp, &rleft, &atv);
-      if (result != GCERT_OK || !gcert_der_is(&atv, GCERT_DER_UNIVERSAL, 1, 16)) {
-        return GCERT_ERR_CORRUPT;
-      }
-      ap = atv.value;
-      aleft = atv.value_len;
-      result = gcert_der_next(&ap, &aleft, &oid);
-      if (result != GCERT_OK) {
-        return result;
-      }
-      result = gcert_der_next(&ap, &aleft, &val);
-      if (result != GCERT_OK || aleft != 0) {
-        return GCERT_ERR_CORRUPT;
-      }
-      if (gcert_der_oid_is(&oid, OID_CN, sizeof OID_CN) && val.constructed == 0 &&
-          host_match(host, host_len, val.value, val.value_len)) {
-        return GCERT_OK;
-      }
-    }
-  }
-  return GCERT_ERR_MISMATCH;
-}
-
-GCERT_Result gcert_x509_hostname(const GCERT_X509 * cert, const char * name,
-    size_t name_len) {
-  const unsigned char * host;
-  size_t i;
-
-  if (cert == NULL || (name == NULL && name_len != 0)) {
-    return GCERT_ERR_INVALID;
-  }
-  host = (const unsigned char *)name;
-  if (name_len > 0 && host[name_len - 1u] == '.') {
-    name_len--;
-  }
-  if (!host_ok(host, name_len)) {
-    return GCERT_ERR_INVALID;
-  }
-  for (i = 0; i < name_len; i++) {
-    if (host[i] == 0) {
-      return GCERT_ERR_INVALID;
-    }
-  }
-  if (cert->dns_san) {
-    GCERT_Der names;
-    const unsigned char * p;
-    size_t left;
-    int matched;
-    GCERT_Result result = whole(cert->san, cert->san_len, &names);
-    if (result != GCERT_OK) {
-      return result;
-    }
-    p = names.value;
-    left = names.value_len;
-    matched = 0;
-    while (left != 0) {
-      GCERT_Der gn;
-      result = gcert_der_next(&p, &left, &gn);
-      if (result != GCERT_OK) {
-        return result;
-      }
-      if (gn.tag_class == GCERT_DER_CONTEXT && gn.constructed == 0 &&
-          gn.number == 2 && host_match(host, name_len, gn.value, gn.value_len)) {
-        matched = 1;
-      }
-    }
-    return matched ? GCERT_OK : GCERT_ERR_MISMATCH;
-  }
-  return match_cn(cert, host, name_len);
 }

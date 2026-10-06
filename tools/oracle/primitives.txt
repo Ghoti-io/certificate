@@ -16,4 +16,5 @@ x509	implemented	openssl	tests/data/vectors/x509.vec
 crl	implemented	openssl	tests/data/vectors/crl.vec
 ocsp	implemented	openssl	tests/data/vectors/ocsp.vec
 pkcs12	implemented	openssl	tests/data/vectors/pkcs12.vec
+ip	implemented	self	-
 ssh_cert	excluded	none	-
