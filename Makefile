@@ -239,9 +239,18 @@ endif
 endif
 INCLUDE += $(SECURITY_CFLAGS)
 
+# System libraries the archive needs, named AFTER it and after the libraries
+# above on a link line: a static import library is searched once, in order
+# (the lesson from security's -lbcrypt). crypt32 is where the Windows root
+# store is enumerated, in src/trust/system.c.
+SYS_LIBS :=
+ifeq ($(OS_NAME), Windows)
+SYS_LIBS := -lcrypt32
+endif
+
 # security's own dependency on cutil is in its .pc file, so the order here
 # is the order the linker wants: this library, then security, then cutil.
-DEP_LIBS := $(SECURITY_LIBS) $(CUTIL_LIBS)
+DEP_LIBS := $(SECURITY_LIBS) $(CUTIL_LIBS) $(SYS_LIBS)
 
 SOURCES := $(shell find src -type f -name '*.c')
 LIBOBJECTS := $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SOURCES))
