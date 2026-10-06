@@ -478,6 +478,110 @@ TEST(Key, EveryAllocationMayFail) {
   }
 }
 
+namespace {
+
+/* An allocator that checks every block it is handed back is all zeros: a
+ * secret that was in it was wiped first. Blocks are of whatever size they were
+ * asked for, and a block that never held a secret is zero because the
+ * allocator zero-fills what it hands out. */
+struct Audit {
+  std::vector<std::pair<unsigned char *, size_t>> blocks;
+  size_t freed = 0;
+  size_t dirty = 0;
+};
+
+void * a_alloc(void * ctx, size_t n, bool zero) {
+  Audit * a = static_cast<Audit *>(ctx);
+  unsigned char * p = static_cast<unsigned char *>(std::malloc(n == 0 ? 1 : n));
+  /* Fill with a pattern first, so a block that is never written looks dirty. */
+  std::memset(p, zero ? 0 : 0xA5, n);
+  a->blocks.push_back({p, n});
+  return p;
+}
+
+} /* namespace */
+
+TEST(Key, EverySecretIsWipedBeforeItsBlockIsFreed) {
+  auto m = [](void * ctx, size_t n) -> void * { return a_alloc(ctx, n, false); };
+  auto c = [](void * ctx, size_t a, size_t b) -> void * { return a_alloc(ctx, a * b, true); };
+  auto r = [](void *, void *, size_t) -> void * { return nullptr; };
+  auto fr = [](void * ctx, void * p) {
+    Audit * a = static_cast<Audit *>(ctx);
+    for (auto & blk : a->blocks) {
+      if (blk.first == p) {
+        a->freed++;
+        for (size_t i = 0; i < blk.second; i++) {
+          if (blk.first[i] != 0) {
+            a->dirty++;
+            break;
+          }
+        }
+        std::free(p);
+        blk.first = nullptr;
+        return;
+      }
+    }
+  };
+  for (const char * file : {"rsa.pk8.pem", "p256.pk8.pem", "ed25519.pk8.pem", "rsa.legacy.pem",
+      "rsa.enc.pem"}) {
+    Audit audit;
+    GCERT_Allocator al = {&audit, m, c, r, fr};
+    Bytes pem = load(file);
+    Bytes pw = load("password");
+    GCERT_Key * k = nullptr;
+    ASSERT_EQ(gcert_key_from_pem(&al, pem.data(), pem.size(), pw.data(), pw.size(), nullptr, &k),
+        GCERT_OK) << file;
+    gcert_key_free(k);
+    EXPECT_GE(audit.freed, 2u) << file;      /* the decode buffer and the key, at least */
+    EXPECT_EQ(audit.dirty, 0u) << file << ": a block went back to the allocator still holding bytes";
+    for (auto & blk : audit.blocks) {
+      EXPECT_EQ(blk.first, nullptr) << file << ": a block was never freed";
+    }
+  }
+}
+
+TEST(Key, ALoadThatFailsWipesWhatItCopied) {
+  auto m = [](void * ctx, size_t n) -> void * { return a_alloc(ctx, n, false); };
+  auto c = [](void * ctx, size_t a, size_t b) -> void * { return a_alloc(ctx, a * b, true); };
+  auto r = [](void *, void *, size_t) -> void * { return nullptr; };
+  auto fr = [](void * ctx, void * p) {
+    Audit * a = static_cast<Audit *>(ctx);
+    for (auto & blk : a->blocks) {
+      if (blk.first == p) {
+        a->freed++;
+        for (size_t i = 0; i < blk.second; i++) {
+          if (blk.first[i] != 0) {
+            a->dirty++;
+            break;
+          }
+        }
+        std::free(p);
+        blk.first = nullptr;
+        return;
+      }
+    }
+  };
+  /* An RSA key with a damaged private exponent: it parses, is copied into the
+   * key object, and is refused by the load's own signature check. */
+  Bytes pem = load("rsa.pk8.pem");
+  Bytes der(pem.size());
+  size_t n = 0;
+  char label[32] = {0};
+  ASSERT_EQ(gcert_pem_decode(pem.data(), pem.size(), der.data(), der.size(), &n, label,
+      sizeof label - 1), GCERT_OK);
+  der.resize(n);
+  GCERT_Pkcs8 view;
+  ASSERT_EQ(gcert_pkcs8_parse(der.data(), der.size(), &view), GCERT_OK);
+  const_cast<unsigned char *>(view.d)[view.d_len / 2] ^= 0x40;
+  Audit audit;
+  GCERT_Allocator al = {&audit, m, c, r, fr};
+  GCERT_Key * k = nullptr;
+  EXPECT_EQ(gcert_key_from_pkcs8(&al, der.data(), der.size(), &k), GCERT_ERR_MISMATCH);
+  EXPECT_EQ(k, nullptr);
+  EXPECT_EQ(audit.freed, 1u);
+  EXPECT_EQ(audit.dirty, 0u);
+}
+
 int main(int argc, char ** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
