@@ -174,9 +174,14 @@ count for a wildcard), peer identity extraction for mutual TLS, revocation
 policy over the bytes this library parses, and key loading that returns a
 signing object.
 
-The Windows branches have not been run: `tools/xwin/` in the workspace
-cross-builds and runs `security` under wine and does not yet include this
-library, and the Makefile's `TODO(windows)` marker says the same.
+The Windows branches ran once, on 2026-10-06: the workspace's
+`tools/xwin/certificate.sh` cross-builds this library's DLL and archive with its
+own Makefile and runs all 72 tests under wine, and requires a planted defect to
+fail the same run. That is not a Windows machine. It did find one defect that
+Linux did not (a test comparing two enums, in a template from a system header,
+which GCC does not report), and it has not run `GCERT_API`'s dllimport arm,
+`make install` into `/mingw64`, or real MSYS2; the Makefile's `TODO(windows)`
+marker says which.
 
 ## License
 

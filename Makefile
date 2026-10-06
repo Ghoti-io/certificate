@@ -88,11 +88,13 @@ else ifeq ($(UNAME_S), Darwin)
 	override BUILD := mac/$(BUILD)
 
 # TODO(windows): the Windows branches in this file were adapted from
-# security's, which were adapted from font's, and have never been run for this
-# library, nor has GCERT_API's dllexport/dllimport switching. The workspace's
-# tools/xwin/ cross-builds and runs security under wine and does not include
-# this library yet; when it does, its archive link takes the GCERT_STATIC arm,
-# so the DLL arms still would not run. Check list: notes/suite/WINDOWS-TODO.md.
+# security's, which were adapted from font's. They have run once, on
+# 2026-10-06: the workspace's tools/xwin/certificate.sh cross-builds the DLL
+# and the archive with them, under a shim that makes the container answer
+# MINGW64_NT, and runs all 72 tests under wine. That is an imitation of MSYS2
+# and wine is not Windows. What has not run: GCERT_API's dllimport arm, since
+# the tests link the archive and take the GCERT_STATIC arm; `make install` into
+# /mingw64; and a real MSYS2. Check list: notes/suite/WINDOWS-TODO.md.
 else ifeq ($(findstring MINGW32_NT,$(UNAME_S)),MINGW32_NT)
 	OS_NAME := Windows
 	LIB_EXTENSION := dll
