@@ -1,0 +1,22 @@
+# The oracle image, pinned.
+#
+# One line per reference, tab-separated: <name> <image> <version> <what it answers>.
+#
+# This image is built here, so the tag is not a digest of the finished image.
+# What is pinned instead is everything the build reads - the Debian base by
+# digest and the openssl package by full apt version - and the run-time check
+# is the guarantee. oracle_env.check_pin() therefore runs in both modes.
+#
+# The version field is what the reference must say. For openssl that is the
+# library version, not the Debian revision: a disagreement with NIST's
+# SHA-256("abc") is about OpenSSL 3.5.7.
+#
+# This is the same OpenSSL as security's, deliberately: two libraries that
+# each judge a parser by it should be asking one reference. The Containerfile
+# here is the part of security's that this library needs; Wycheproof and the
+# helper programs for the ciphers are security's.
+#
+# Building it:
+#   make oracle-build
+
+openssl	localhost/ghoti-certificate-oracle-openssl:3.5.7	OpenSSL 3.5.7	SHA-256 of a published input, and the openssl CLI for certificate, key, CRL and OCSP differentials

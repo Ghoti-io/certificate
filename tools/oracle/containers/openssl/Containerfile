@@ -1,0 +1,25 @@
+# OpenSSL 3.5.7, in one image.
+#
+# Built here, so the finished image has no digest to pin. Everything the build
+# reads is pinned instead: the Debian base by digest and the openssl package by
+# full apt version. The run-time check - openssl-version - is what a second
+# build has to satisfy.
+#
+# The apt pin stops resolving when the archive drops it. That failure is the
+# point: an unpinned `apt-get install openssl` would silently move the oracle.
+FROM docker.io/library/debian:13-slim@sha256:7792b1f7702a86946cd518db72b6a407302c3e9bc1635634368b878189e8221c
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# debian:13-slim already lists trixie-security, signed with the archive's
+# .pgp keyring. The version pin is the guarantee: main may still be on an
+# older openssl, and an unpinned install would take it.
+RUN apt-get update -qq \
+    && apt-get install -y --no-install-recommends \
+      openssl=3.5.7-1~deb13u2 \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY openssl-version /usr/local/bin/
+RUN chmod 0755 /usr/local/bin/openssl-version

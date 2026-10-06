@@ -1,0 +1,3 @@
+# make check-oracle exports the certificate's key as unencrypted PKCS#8
+# and this library must report the same key kind.
+primitive pkcs8

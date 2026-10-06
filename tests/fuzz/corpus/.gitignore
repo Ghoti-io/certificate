@@ -1,0 +1,20 @@
+# The corpus grows as the fuzzer runs; only the hand-built seeds are tracked.
+#
+# `make fuzz-run-<name>` hands this directory to libFuzzer as its corpus, so
+# every campaign writes its discoveries here. A fifteen-minute run adds a few
+# thousand files, which is a great many git objects for input the next run
+# would find again anyway - and this suite already has cutil's six megabytes
+# of tracked Doxygen output as the cautionary tale. Until this file existed
+# each algorithm's commit swept that run's units in with it: 1,439 of them
+# were tracked, none of them named.
+#
+# `!*/` rather than a named directory: `*` excludes the per-harness
+# directories themselves, and git will not look inside an excluded directory,
+# so a `.seed` under one that is not re-included is invisible - `git status`
+# stays clean and the fixture is silently absent from every clone. Admitting
+# every directory by pattern means a new harness does not have to remember to
+# amend this file.
+*
+!.gitignore
+!*/
+!*.seed

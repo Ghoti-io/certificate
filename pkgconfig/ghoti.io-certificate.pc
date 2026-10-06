@@ -1,0 +1,7 @@
+Name: Ghoti.io Certificate(BRANCH)
+Description: Certificates and keys: DER, PEM, PKCS#8, PKCS#12, X.509, CRL and OCSP
+Version: (VERSION)
+URL: https://github.com/Ghoti-io/certificate
+Libs: -L(PC_LIB_DIR) -l(SUITE)-(PROJECT)(BRANCH)
+CFlags: -I(PC_INCLUDE_DIR)
+Requires: (REQUIRES)

@@ -1,0 +1,3 @@
+# make check-oracle decodes the PEM certificate OpenSSL just wrote and
+# compares the bytes with OpenSSL's own DER.
+primitive pem

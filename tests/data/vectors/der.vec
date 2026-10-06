@@ -1,0 +1,9 @@
+# One strict DER INTEGER. make check-oracle asks OpenSSL's asn1parse
+# for the same bytes and compares the tag.
+primitive der
+
+case integer-one
+hex 020101
+class 0
+constructed 0
+number 2

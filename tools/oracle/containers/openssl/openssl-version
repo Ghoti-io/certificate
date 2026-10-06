@@ -1,0 +1,16 @@
+#!/bin/sh
+# Print the pinned openssl identity, or the real one and a failure.
+#
+# The pattern requires a space after the patch component, so 3.5.70 does not
+# match 3.5.7. A substring check on the raw `openssl version` line would.
+set -eu
+got=$(openssl version)
+case $got in
+  "OpenSSL 3.5.7 "*)
+    printf '%s\n' 'OpenSSL 3.5.7'
+    ;;
+  *)
+    printf '%s\n' "$got" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,19 @@
+# The registry. One row per encoding this library declares.
+#
+# id	status	judge	vectors
+#
+# status: implemented | pending | excluded
+# judge:  who says the answer is right. openssl, nist, rfc and wycheproof
+#         name an outside reference; self and none do not.
+# vectors: the known-answer file, or - for none.
+#
+# The primitives these encodings use are rows in security's registry.
+
+der	implemented	openssl	tests/data/vectors/der.vec
+pem	implemented	openssl	tests/data/vectors/pem.vec
+pkcs8	implemented	openssl	tests/data/vectors/pkcs8.vec
+x509	implemented	openssl	tests/data/vectors/x509.vec
+crl	implemented	openssl	tests/data/vectors/crl.vec
+ocsp	implemented	openssl	tests/data/vectors/ocsp.vec
+pkcs12	implemented	openssl	tests/data/vectors/pkcs12.vec
+ssh_cert	excluded	none	-
