@@ -307,6 +307,29 @@ TEST(Trust, SystemRootsOnThisMachine) {
 }
 #endif
 
+#ifdef _WIN32
+TEST(Trust, SystemRootsOnWindows) {
+  /* The ROOT store, enumerated with CertEnumCertificatesInStore. Under wine it
+   * holds what wine ships; on Windows, what the machine trusts. Either way
+   * every entry the loader reported as added is one this library parses
+   * again, and the counts agree with the store. */
+  Store st;
+  size_t added = 0;
+  size_t skipped = 0;
+  GCERT_Result r = gcert_trust_add_system(st.s, &added, &skipped);
+  ASSERT_TRUE(r == GCERT_OK || r == GCERT_ERR_IO) << gcert_result_string(r);
+  EXPECT_EQ(gcert_trust_count(st.s), added);
+  std::printf("windows roots: %zu read, %zu skipped\n", added, skipped);
+  for (size_t i = 0; i < gcert_trust_count(st.s); i++) {
+    const unsigned char * der;
+    size_t n;
+    GCERT_X509 x;
+    ASSERT_EQ(gcert_trust_get(st.s, i, &der, &n), GCERT_OK);
+    ASSERT_EQ(gcert_x509_parse(der, n, &x), GCERT_OK);
+  }
+}
+#endif
+
 /* --- The allocator failing ------------------------------------------------- */
 
 namespace {
