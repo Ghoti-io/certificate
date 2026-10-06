@@ -42,6 +42,8 @@
 
 /* Public types and functions. */
 #define GCERT_Allocator GHOTIIO_CERTIFICATE(GCERT_Allocator)
+#define GCERT_Chain GHOTIIO_CERTIFICATE(GCERT_Chain)
+#define GCERT_ChainFailure GHOTIIO_CERTIFICATE(GCERT_ChainFailure)
 #define GCERT_Crl GHOTIIO_CERTIFICATE(GCERT_Crl)
 #define GCERT_Der GHOTIIO_CERTIFICATE(GCERT_Der)
 #define GCERT_Limits GHOTIIO_CERTIFICATE(GCERT_Limits)
@@ -56,6 +58,7 @@
 #define GCERT_X509_Tbs GHOTIIO_CERTIFICATE(GCERT_X509_Tbs)
 
 #define gcert_allocator_default GHOTIIO_CERTIFICATE(gcert_allocator_default)
+#define gcert_chain_build GHOTIIO_CERTIFICATE(gcert_chain_build)
 #define gcert_crl_contains GHOTIIO_CERTIFICATE(gcert_crl_contains)
 #define gcert_crl_parse GHOTIIO_CERTIFICATE(gcert_crl_parse)
 #define gcert_crl_signed_by GHOTIIO_CERTIFICATE(gcert_crl_signed_by)

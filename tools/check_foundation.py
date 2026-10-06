@@ -134,6 +134,7 @@ SELFTEST_EXCLUDED = {
     "x509": "parses and issues; issuance needs a key and a clock",
     "crl": "parses only; its known answer is a fixture",
     "ocsp": "parses only; its known answer is a fixture",
+    "chain": "a search whose verdict is gcert_x509_path's; its tests build hierarchies",
     "trust": "a container of caller-supplied certificates; nothing here has a known answer of its own",
 }
 
@@ -214,7 +215,7 @@ def main():
         "gcert_x509_verify_host", "gcert_pem_next",
         "gcert_trust_new", "gcert_trust_free", "gcert_trust_count",
         "gcert_trust_add_der", "gcert_trust_add_pem", "gcert_trust_add_file",
-        "gcert_trust_add_system", "gcert_trust_get", "gcert_trust_find_issuers",
+        "gcert_trust_add_system", "gcert_trust_get", "gcert_trust_find_issuers", "gcert_chain_build",
     }
     clean = classify(present, rows)
     if clean:

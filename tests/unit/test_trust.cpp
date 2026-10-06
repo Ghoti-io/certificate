@@ -243,6 +243,56 @@ TEST(Trust, FindIssuersOrdersByKeyIdentifier) {
   EXPECT_EQ(gcert_trust_find_issuers(st.s, nullptr, idx, 8, &count), GCERT_ERR_INVALID);
 }
 
+#ifndef _WIN32
+TEST(Trust, SystemLoaderHonoursTheEnvironmentFile) {
+  Bytes a = pki::root("a", pki::key(11));
+  std::string pem = pem_of(a);
+  std::string path = write_file("env", pem.data(), pem.size());
+  ASSERT_EQ(setenv("SSL_CERT_FILE", path.c_str(), 1), 0);
+  Store st;
+  size_t added = 0;
+  size_t skipped = 0;
+  EXPECT_EQ(gcert_trust_add_system(st.s, &added, &skipped), GCERT_OK);
+  EXPECT_EQ(added, 1u);
+  EXPECT_EQ(skipped, 0u);
+  /* A file that is not there falls through to the well-known places; what
+   * is on this machine is not ours to assert, only that it is not a crash
+   * and not a half-loaded store. */
+  ASSERT_EQ(setenv("SSL_CERT_FILE", "/nonexistent/gcert-no-such-file", 1), 0);
+  Store st2;
+  GCERT_Result r = gcert_trust_add_system(st2.s, &added, &skipped);
+  EXPECT_TRUE(r == GCERT_OK || r == GCERT_ERR_IO) << gcert_result_string(r);
+  EXPECT_EQ(gcert_trust_count(st2.s), added);
+  unsetenv("SSL_CERT_FILE");
+  std::remove(path.c_str());
+}
+
+TEST(Trust, SystemRootsOnThisMachine) {
+  unsetenv("SSL_CERT_FILE");
+  Store st;
+  size_t added = 0;
+  size_t skipped = 0;
+  GCERT_Result r = gcert_trust_add_system(st.s, &added, &skipped);
+  if (r == GCERT_ERR_IO) {
+    GTEST_SKIP() << "no system bundle on this machine";
+  }
+  ASSERT_EQ(r, GCERT_OK);
+  /* A real bundle has well over fifty roots, and this parser should read
+   * nearly all of them: the entries it cannot are counted, not hidden. */
+  EXPECT_GT(added, 50u);
+  EXPECT_LT(skipped, added / 10u + 1u) << added << " read, " << skipped << " skipped";
+  std::printf("system roots: %zu read, %zu skipped\n", added, skipped);
+  /* Every anchor is one this library can parse again. */
+  for (size_t i = 0; i < gcert_trust_count(st.s); i++) {
+    const unsigned char * der;
+    size_t n;
+    GCERT_X509 x;
+    ASSERT_EQ(gcert_trust_get(st.s, i, &der, &n), GCERT_OK);
+    ASSERT_EQ(gcert_x509_parse(der, n, &x), GCERT_OK);
+  }
+}
+#endif
+
 /* --- The allocator failing ------------------------------------------------- */
 
 namespace {

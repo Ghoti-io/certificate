@@ -35,26 +35,12 @@
 #include <ghoti.io/certificate/x509.h>
 
 #include "../der/der_int.h"
+#include "signed.h"
 
 #include <string.h>
 
 static const unsigned char OID_RSA[] = {
   0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01
-};
-static const unsigned char OID_RSA_MD5[] = {
-  0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04
-};
-static const unsigned char OID_RSA_SHA1[] = {
-  0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05
-};
-static const unsigned char OID_RSA_SHA256[] = {
-  0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b
-};
-static const unsigned char OID_RSA_SHA384[] = {
-  0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0c
-};
-static const unsigned char OID_RSA_SHA512[] = {
-  0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0d
 };
 static const unsigned char OID_EC[] = {
   0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01
@@ -64,12 +50,6 @@ static const unsigned char OID_P256[] = {
 };
 static const unsigned char OID_P384[] = {
   0x2b, 0x81, 0x04, 0x00, 0x22
-};
-static const unsigned char OID_ECDSA_SHA256[] = {
-  0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02
-};
-static const unsigned char OID_ECDSA_SHA384[] = {
-  0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03
 };
 static const unsigned char OID_ED25519[] = {0x2b, 0x65, 0x70};
 static const unsigned char OID_BC[] = {0x55, 0x1d, 0x13};
@@ -175,6 +155,8 @@ static GCERT_Result parse_spki(const GCERT_Der * spki, GCERT_X509 * out) {
     if (result != GCERT_OK) {
       return result;
     }
+    out->key_bits = bits;
+    out->key_bits_len = bits_len;
     if (gcert_der_oid_is(&oid, OID_RSA, sizeof OID_RSA)) {
       GCERT_Der key;
       GCERT_Der n;
@@ -250,98 +232,7 @@ static GCERT_Result parse_spki(const GCERT_Der * spki, GCERT_X509 * out) {
 }
 
 static GCERT_Result parse_sig_alg(const GCERT_Der * alg, GCERT_X509 * out) {
-  const unsigned char * p;
-  size_t left;
-  GCERT_Der oid;
-  GCERT_Result result;
-
-  if (!gcert_der_is(alg, GCERT_DER_UNIVERSAL, 1, 16)) {
-    return GCERT_ERR_CORRUPT;
-  }
-  p = alg->value;
-  left = alg->value_len;
-  result = gcert_der_next(&p, &left, &oid);
-  if (result != GCERT_OK || gcert_der_oid_ok(&oid) != GCERT_OK) {
-    return GCERT_ERR_CORRUPT;
-  }
-  if (gcert_der_oid_is(&oid, OID_RSA_MD5, sizeof OID_RSA_MD5)) {
-    out->sig_hash = GSEC_RSA_MD5;
-    out->sig_key = GCERT_X509_RSA;
-  } else if (gcert_der_oid_is(&oid, OID_RSA_SHA1, sizeof OID_RSA_SHA1)) {
-    out->sig_hash = GSEC_RSA_SHA1;
-    out->sig_key = GCERT_X509_RSA;
-  } else if (gcert_der_oid_is(&oid, OID_RSA_SHA256, sizeof OID_RSA_SHA256)) {
-    out->sig_hash = GSEC_RSA_SHA256;
-    out->sig_key = GCERT_X509_RSA;
-  } else if (gcert_der_oid_is(&oid, OID_RSA_SHA384, sizeof OID_RSA_SHA384)) {
-    out->sig_hash = GSEC_RSA_SHA384;
-    out->sig_key = GCERT_X509_RSA;
-  } else if (gcert_der_oid_is(&oid, OID_RSA_SHA512, sizeof OID_RSA_SHA512)) {
-    out->sig_hash = GSEC_RSA_SHA512;
-    out->sig_key = GCERT_X509_RSA;
-  } else if (gcert_der_oid_is(&oid, OID_ECDSA_SHA256, sizeof OID_ECDSA_SHA256)) {
-    out->sig_key = GCERT_X509_P256;
-  } else if (gcert_der_oid_is(&oid, OID_ECDSA_SHA384, sizeof OID_ECDSA_SHA384)) {
-    out->sig_key = GCERT_X509_P384;
-  } else if (gcert_der_oid_is(&oid, OID_ED25519, sizeof OID_ED25519)) {
-    out->sig_key = GCERT_X509_ED25519;
-    if (left != 0) {
-      return GCERT_ERR_CORRUPT;
-    }
-    return GCERT_OK;
-  } else {
-    return GCERT_ERR_UNSUPPORTED;
-  }
-  if (out->sig_key == GCERT_X509_RSA) {
-    return null_param(&p, &left);
-  }
-  if (left != 0) {
-    return GCERT_ERR_CORRUPT;
-  }
-  return GCERT_OK;
-}
-
-static GCERT_Result ecdsa_raw(const unsigned char * bits, size_t bits_len,
-    size_t width, unsigned char * raw) {
-  GCERT_Der seq;
-  GCERT_Der num;
-  GCERT_Result result;
-  const unsigned char * p;
-  size_t left;
-  const unsigned char * be;
-  size_t be_len;
-  size_t i;
-
-  result = whole(bits, bits_len, &seq);
-  if (result != GCERT_OK || !gcert_der_is(&seq, GCERT_DER_UNIVERSAL, 1, 16)) {
-    return GCERT_ERR_CORRUPT;
-  }
-  p = seq.value;
-  left = seq.value_len;
-  for (i = 0; i < width * 2u; i++) {
-    raw[i] = 0;
-  }
-  for (i = 0; i < 2; i++) {
-    result = gcert_der_next(&p, &left, &num);
-    if (result != GCERT_OK) {
-      return result;
-    }
-    result = gcert_der_unsigned(&num, &be, &be_len);
-    if (result != GCERT_OK || be_len == 0 || be_len > width) {
-      return GCERT_ERR_CORRUPT;
-    }
-    {
-      size_t j;
-      unsigned char * dest = raw + i * width + (width - be_len);
-      for (j = 0; j < be_len; j++) {
-        dest[j] = be[j];
-      }
-    }
-  }
-  if (left != 0) {
-    return GCERT_ERR_CORRUPT;
-  }
-  return GCERT_OK;
+  return x509_sig_alg(alg, &out->sig_key, &out->sig_hash);
 }
 
 /* The purposes, not just the syntax. An OID with no bit of its own sets
@@ -1074,6 +965,8 @@ static GCERT_Result parse_tbs(const GCERT_Der * tbs, const unsigned char * tbs_b
     if (result != GCERT_OK || be_len == 0 || be_len > 20) {
       return GCERT_ERR_CORRUPT;
     }
+    out->serial = be;
+    out->serial_len = be_len;
   }
   result = gcert_der_next(&p, &left, &field);
   if (result != GCERT_OK) {
@@ -1157,6 +1050,8 @@ static GCERT_Result parse_tbs(const GCERT_Der * tbs, const unsigned char * tbs_b
   if (result != GCERT_OK) {
     return result;
   }
+  out->spki = p - field.total_len;
+  out->spki_len = field.total_len;
   result = parse_spki(&field, out);
   if (result != GCERT_OK) {
     return result;
@@ -1272,14 +1167,12 @@ GCERT_Result gcert_x509_parse(const void * der, size_t len, GCERT_X509 * out) {
     out->sig = bits;
     out->sig_len = bits_len;
   } else {
-    size_t width = out->sig_key == GCERT_X509_P256 ? 32u : 48u;
-    result = ecdsa_raw(bits, bits_len, width, out->ecdsa_raw);
+    result = x509_sig_bits(out->sig_key, bits, bits_len, &out->sig, &out->sig_len,
+        out->ecdsa_raw);
     if (result != GCERT_OK) {
       clear_cert(out);
       return result;
     }
-    out->sig = out->ecdsa_raw;
-    out->sig_len = width * 2u;
   }
   return GCERT_OK;
 }

@@ -159,6 +159,14 @@ static GCERT_Result ecdsa_raw(const unsigned char * bits, size_t bits_len,
       return result;
     }
     result = gcert_der_unsigned(&num, &be, &be_len);
+    if (result == GCERT_OK && be_len > width && be_len <= 67u) {
+      /* An integer wider than this algorithm identifier's curve, but no wider
+       * than a P-521 coordinate with its sign byte: a signature made with a
+       * larger curve than the digest it names is paired with here (P-384
+       * with SHA-256, say). That is a combination this library does not
+       * verify, not a malformed certificate. */
+      return GCERT_ERR_UNSUPPORTED;
+    }
     if (result != GCERT_OK || be_len == 0 || be_len > width) {
       return GCERT_ERR_CORRUPT;
     }

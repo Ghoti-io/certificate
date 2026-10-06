@@ -18,4 +18,5 @@ ocsp	implemented	openssl	tests/data/vectors/ocsp.vec
 pkcs12	implemented	openssl	tests/data/vectors/pkcs12.vec
 ip	implemented	self	-
 trust	implemented	self	-
+chain	implemented	self	-
 ssh_cert	excluded	none	-

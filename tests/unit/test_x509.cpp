@@ -9,6 +9,7 @@
 #include "test_helpers.h"
 
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <vector>
 
@@ -121,6 +122,60 @@ TEST(X509, RsaEd25519AndP384) {
     EXPECT_EQ(gcert_x509_path(leaf.data(), leaf.size(), nullptr, nullptr, 0,
         ca.data(), ca.size(), kInside, 0), GCERT_OK) << row.leaf;
   }
+}
+
+TEST(X509, SerialSpkiAndKeyBitsAreExposed) {
+  /* leaf.der's serial is the one leaf.crl lists (see test_crl.cpp). */
+  static const unsigned char serial[] = {
+    0x1d, 0xf0, 0x17, 0x04, 0x5e, 0xa3, 0x08, 0x80, 0x5b, 0x21,
+    0x9a, 0x09, 0x22, 0xc6, 0xe6, 0xb4, 0x83, 0xc3, 0x15, 0x50
+  };
+  auto der = load("leaf.der");
+  GCERT_X509 c;
+  ASSERT_EQ(gcert_x509_parse(der.data(), der.size(), &c), GCERT_OK);
+  ASSERT_EQ(c.serial_len, sizeof serial);
+  EXPECT_EQ(std::memcmp(c.serial, serial, sizeof serial), 0);
+  /* The SPKI is a SEQUENCE inside the certificate, and ends with the key bits. */
+  ASSERT_NE(c.spki, nullptr);
+  EXPECT_GE(c.spki, der.data());
+  EXPECT_LE(c.spki + c.spki_len, der.data() + der.size());
+  EXPECT_EQ(c.spki[0], 0x30);
+  ASSERT_NE(c.key_bits, nullptr);
+  EXPECT_EQ(c.key_bits + c.key_bits_len, c.spki + c.spki_len);
+  /* RSAPublicKey is a SEQUENCE; a curve key's bits begin with 0x04. */
+  EXPECT_EQ(c.key_bits[0], c.key == GCERT_X509_RSA ? 0x30 : 0x04);
+  auto rsa = load("sha1-ca.der");
+  GCERT_X509 r;
+  ASSERT_EQ(gcert_x509_parse(rsa.data(), rsa.size(), &r), GCERT_OK);
+  ASSERT_EQ(r.key, GCERT_X509_RSA);
+  EXPECT_EQ(r.key_bits[0], 0x30);
+  /* For a curve key the bits are the point, with its 0x04 prefix; for Ed25519, the key. */
+  auto ed = load("ed-leaf.der");
+  GCERT_X509 e;
+  ASSERT_EQ(gcert_x509_parse(ed.data(), ed.size(), &e), GCERT_OK);
+  ASSERT_EQ(e.key_bits_len, 32u);
+  EXPECT_EQ(std::memcmp(e.key_bits, e.point, 32), 0);
+  auto ec = load("p256-leaf.der");
+  GCERT_X509 p;
+  ASSERT_EQ(gcert_x509_parse(ec.data(), ec.size(), &p), GCERT_OK);
+  ASSERT_EQ(p.key_bits_len, 65u);
+  EXPECT_EQ(p.key_bits[0], 0x04);
+  EXPECT_EQ(std::memcmp(p.key_bits + 1, p.point, 64), 0);
+}
+
+TEST(X509, AnEcdsaDigestFromAnotherCurveIsUnsupportedNotCorrupt) {
+  /* The SSL.com ECC root, which is public: a P-384 key whose own signature is
+   * ecdsa-with-SHA256 (SHA-256 fingerprint 3417bb06 cc6007da 1b961c92 0b8ab4ce
+   * 3fad820e 4aa30b9a cbc4a74e bdcebc65). ECDSA does not tie the curve to the
+   * digest, and this library verifies only the pairings P-256 with SHA-256
+   * and P-384 with SHA-384, so it cannot check this signature. What it must
+   * not do is call a well-formed certificate corrupt: a trust store loading
+   * the system bundle counts these as unsupported, and a person reading the
+   * result is told the true reason. 3 of the 150 roots in Debian's bundle
+   * are like this. */
+  auto der = load("ssl-com-ecc-root-p384-sha256.der");
+  GCERT_X509 parsed;
+  EXPECT_EQ(gcert_x509_parse(der.data(), der.size(), &parsed), GCERT_ERR_UNSUPPORTED);
 }
 
 int main(int argc, char ** argv) {

@@ -150,6 +150,12 @@ typedef struct GCERT_X509 {
   size_t ski_len;                 ///< Length of @p ski.
   const unsigned char * aki;      ///< authorityKeyIdentifier's keyIdentifier, or NULL.
   size_t aki_len;                 ///< Length of @p aki.
+  const unsigned char * serial;   ///< The serial number, unsigned magnitude (1 to 20 bytes).
+  size_t serial_len;              ///< Length of @p serial.
+  const unsigned char * spki;     ///< The whole SubjectPublicKeyInfo, as it sits in the DER.
+  size_t spki_len;                ///< Length of @p spki.
+  const unsigned char * key_bits; ///< The subjectPublicKey bits: what an OCSP key hash is taken over.
+  size_t key_bits_len;            ///< Length of @p key_bits.
 } GCERT_X509;
 
 /**
@@ -182,8 +188,11 @@ GCERT_API GCERT_Result gcert_x509_signed_by(const GCERT_X509 * cert,
 /**
  * @brief Validate a chain from the leaf up to a trust anchor.
  *
- * @p mids are the intermediates, leaf's issuer first and the anchor's
- * subject last. @p mid_count of 0 means the anchor signed the leaf.
+ * @p mids are the intermediates in the order the anchor's signature runs
+ * down the chain: @p mids[0] is the certificate the anchor signed, and the
+ * last one is the certificate that signed the leaf. (This text used to say
+ * the reverse, which is not what the code does, and nothing tested an order
+ * of more than one.) @p mid_count of 0 means the anchor signed the leaf.
  * The anchor is trusted as a CA even when it has no basicConstraints.
  * An anchor that says it is not a CA is rejected. An intermediate must
  * be a CA and, when keyUsage is present, must have keyCertSign. Both

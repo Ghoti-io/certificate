@@ -33,6 +33,7 @@
 #define GHOTI_IO_GCERT_CERTIFICATE_H
 
 #include <ghoti.io/certificate/allocator.h>
+#include <ghoti.io/certificate/chain.h>
 #include <ghoti.io/certificate/core.h>
 #include <ghoti.io/certificate/crl.h>
 #include <ghoti.io/certificate/der.h>
