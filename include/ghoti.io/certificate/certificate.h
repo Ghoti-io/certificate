@@ -37,6 +37,7 @@
 #include <ghoti.io/certificate/core.h>
 #include <ghoti.io/certificate/crl.h>
 #include <ghoti.io/certificate/der.h>
+#include <ghoti.io/certificate/identity.h>
 #include <ghoti.io/certificate/key.h>
 #include <ghoti.io/certificate/macros.h>
 #include <ghoti.io/certificate/names.h>

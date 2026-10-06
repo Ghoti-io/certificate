@@ -219,6 +219,7 @@ def main():
         "gcert_trust_add_system", "gcert_trust_get", "gcert_trust_find_issuers", "gcert_chain_build",
         "gcert_crl_check", "gcert_ocsp_check", "gcert_revocation_policy_default",
         "gcert_revocation_verdict", "gcert_x509_verify_signature",
+        "gcert_x509_san_next", "gcert_x509_name_attr",
         "gcert_key_from_pkcs8", "gcert_key_from_pem", "gcert_key_free", "gcert_key_kind",
         "gcert_key_matches", "gcert_key_scheme_fits", "gcert_key_sign",
     }
