@@ -240,7 +240,7 @@ digest in `security`), building an OCSP request, the macOS keychain, and the
 constant-time gate.
 
 The Windows branches ran on 2026-10-06: the workspace's
-`tools/xwin/certificate.sh` cross-builds this library's DLL and archive with its
+`suite/tools/xwin/certificate.sh` cross-builds this library's DLL and archive with its
 own Makefile and runs every test under wine, including the root-store
 enumeration, and requires a planted defect to fail the same run. That is not a
 Windows machine. It has not run `GCERT_API`'s dllimport arm, `make install`
