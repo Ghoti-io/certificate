@@ -28,6 +28,8 @@
  * printed. A wrong password exits 1.
  */
 
+/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
+
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/pkcs12.h>

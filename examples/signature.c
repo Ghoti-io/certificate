@@ -31,6 +31,10 @@
  * check-oracle` has OpenSSL verify what this signs and sign what this checks.
  */
 
+/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
+/* check-secret: allow strcmp -- command-line words, never a secret */
+/* check-secret: allow write -- writes the converted public certificate or signature, the example's output */
+
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>

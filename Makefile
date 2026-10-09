@@ -505,7 +505,7 @@ check-fuzz-ub: ## Fail unless the fuzz flags make undefined behaviour a failing 
 	fi
 	@printf 'check-fuzz-ub: planted undefined behaviour fails the run, and the control does not\n'
 
-check-secret: ## Fail if src/ calls memcmp, a userspace generator, or printf
+check-secret: ## Fail if src/, include/ or examples/ call a variable-time compare, a userspace generator or an output function
 	@python3 tools/check-secret.py
 
 check-foundation: ## Fail if the registry, the manifest, or the oracle pins disagree
