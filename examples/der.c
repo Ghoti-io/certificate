@@ -28,8 +28,6 @@
  * A value that is not strict DER exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/der.h>
@@ -61,6 +59,7 @@ int main(int argc, char ** argv) {
   const char * hex;
 
   if (argc != 2) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: der <hex>\n");
     return 2;
   }
@@ -80,6 +79,7 @@ int main(int argc, char ** argv) {
   if (gcert_der_tlv(buf, n / 2u, &view) != GCERT_OK) {
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("%u %u %u\n", view.tag_class, view.constructed, view.number);
   return 0;
 }

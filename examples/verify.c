@@ -31,9 +31,6 @@
  * checked: that needs evidence somebody fetched, and this program does not.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>
@@ -62,11 +59,13 @@ int main(int argc, char ** argv) {
   int64_t now;
 
   if (argc < 3 || argc > 5) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: verify <chain.pem> <host> [anchors.pem] [unix-time]\n");
     return 2;
   }
   in = fopen(argv[1], "rb");
   if (in == NULL) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "verify: cannot open %s\n", argv[1]);
     return 2;
   }
@@ -80,6 +79,7 @@ int main(int argc, char ** argv) {
     if (r == GCERT_ERR_FORMAT) {
       break;
     }
+    /* check-secret: allow strcmp -- command-line words, never a secret */
     if (r == GCERT_OK && strcmp(label, "CERTIFICATE") == 0 && count < MAX_CERTS) {
       pool[count] = der[count];
       lens[count] = len;
@@ -87,6 +87,7 @@ int main(int argc, char ** argv) {
     }
   }
   if (count == 0) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "verify: no certificate in %s\n", argv[1]);
     return 2;
   }
@@ -100,6 +101,7 @@ int main(int argc, char ** argv) {
     r = gcert_trust_add_system(store, NULL, NULL);
   }
   if (r != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "verify: no trust anchors: %s\n", gcert_result_string(r));
     gcert_trust_free(store);
     return 2;
@@ -108,15 +110,18 @@ int main(int argc, char ** argv) {
       GCERT_X509_EKU_SERVER_AUTH, NULL, &chain);
   gcert_trust_free(store);
   if (r != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("chain: %s\n", r == GCERT_ERR_MISMATCH ? "no path to a trust anchor" :
         gcert_result_string(r));
     return 1;
   }
   if (gcert_x509_parse(pool[0], lens[0], &leaf) != GCERT_OK ||
       gcert_x509_verify_host(&leaf, argv[2], strlen(argv[2]), NULL) != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("name: the certificate is not for %s\n", argv[2]);
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("ok\n");
   return 0;
 }

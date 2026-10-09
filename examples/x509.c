@@ -27,8 +27,6 @@
  * notBefore and notAfter. A certificate this parser rejects exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/x509.h>
@@ -45,6 +43,7 @@ int main(int argc, char ** argv) {
   const char * name;
 
   if (argc != 2) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: x509 <file.der>\n");
     return 2;
   }
@@ -72,6 +71,7 @@ int main(int argc, char ** argv) {
   } else {
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("%s %lld %lld\n", name, (long long)cert.not_before,
       (long long)cert.not_after);
   return 0;

@@ -26,9 +26,6 @@
  * The label is printed on stderr. A file that is not one block exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow write -- writes the converted public certificate or signature, the example's output */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/pem.h>
@@ -68,7 +65,9 @@ int main(void) {
     free(der);
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   fprintf(stderr, "%s\n", label);
+  /* check-secret: allow write -- writes the converted public certificate or signature, the example's output */
   if (fwrite(der, 1, out_len, stdout) != out_len) {
     free(text);
     free(der);

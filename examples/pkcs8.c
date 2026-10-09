@@ -29,9 +29,6 @@
  * form exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/pkcs8.h>
@@ -50,6 +47,7 @@ int main(int argc, char ** argv) {
   GCERT_Pkcs8 key;
   const char * name;
 
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (argc == 4 && strcmp(argv[1], "decrypt") == 0) {
     unsigned char plain[KEY_MAX];
     size_t plain_len = 0;
@@ -91,6 +89,7 @@ int main(int argc, char ** argv) {
     }
     gsec_wipe(buf, sizeof buf);
   } else {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: pkcs8 <file> | pkcs8 decrypt <password> <file>\n");
     return 2;
   }
@@ -105,6 +104,7 @@ int main(int argc, char ** argv) {
   } else {
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("%s\n", name);
   return 0;
 }

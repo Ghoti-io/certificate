@@ -29,9 +29,6 @@
  * check-oracle` compares it with `openssl verify`.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>
@@ -87,22 +84,27 @@ int main(int argc, char ** argv) {
   int i;
 
   if (argc < 5 || argc - 5 > 8) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: chain <unix-time> <0|server|client> <anchors.pem> <leaf.der> [pool.der ...]\n");
     return 2;
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (strcmp(argv[2], "server") == 0) {
     purpose = GCERT_X509_EKU_SERVER_AUTH;
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   } else if (strcmp(argv[2], "client") == 0) {
     purpose = GCERT_X509_EKU_CLIENT_AUTH;
   }
   if (gcert_trust_new(NULL, NULL, &store) != GCERT_OK ||
       gcert_trust_add_file(store, argv[3], NULL, NULL) != GCERT_OK ||
       !read_file(argv[4], leaf, sizeof leaf, &leaf_len)) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "chain: cannot read the inputs\n");
     return 2;
   }
   for (i = 5; i < argc; i++) {
     if (!read_file(argv[i], pool_buf[pool_count], sizeof pool_buf[0], &lens[pool_count])) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       fprintf(stderr, "chain: cannot read %s\n", argv[i]);
       return 2;
     }
@@ -113,9 +115,11 @@ int main(int argc, char ** argv) {
       purpose, NULL, &chain);
   gcert_trust_free(store);
   if (r == GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("ok %zu %zu\n", chain.anchor, chain.mid_count);
     return 0;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("fail %s\n", r == GCERT_ERR_MISMATCH ? reason(chain.failure) : gcert_result_string(r));
   return 1;
 }

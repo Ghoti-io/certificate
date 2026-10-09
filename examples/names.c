@@ -32,9 +32,6 @@
  * OpenSSL's `-checkhost`, `-checkip` and `-checkemail`.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>
@@ -67,20 +64,25 @@ int main(int argc, char ** argv) {
   const char * value;
 
   if (argc < 4 || argc > 6) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: names <cert.der> <dns|ip|email|uri|host> <value> [min_labels] [cn]\n");
     return 3;
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (strcmp(argv[2], "ipparse") == 0) {
     unsigned char addr[16];
     size_t addr_len = 0;
     size_t i;
     if (gcert_ip_parse(argv[3], strlen(argv[3]), addr, &addr_len) != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       printf("invalid\n");
       return 2;
     }
     for (i = 0; i < addr_len; i++) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       printf("%02x", addr[i]);
     }
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("\n");
     return 0;
   }
@@ -88,24 +90,31 @@ int main(int argc, char ** argv) {
   if (argc >= 5) {
     options.wildcard_min_labels = (unsigned)strtoul(argv[4], NULL, 10);
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (argc == 6 && strcmp(argv[5], "cn") == 0) {
     options.common_name_fallback = 1;
   }
   if (!read_file(argv[1], der, sizeof der, &der_len) ||
       gcert_x509_parse(der, der_len, &cert) != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "names: cannot read the certificate\n");
     return 3;
   }
   kind = argv[2];
   value = argv[3];
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (strcmp(kind, "dns") == 0) {
     r = gcert_x509_verify_dns(&cert, value, strlen(value), &options);
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   } else if (strcmp(kind, "host") == 0) {
     r = gcert_x509_verify_host(&cert, value, strlen(value), &options);
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   } else if (strcmp(kind, "email") == 0) {
     r = gcert_x509_verify_email(&cert, value, strlen(value));
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   } else if (strcmp(kind, "uri") == 0) {
     r = gcert_x509_verify_uri(&cert, value, strlen(value));
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   } else if (strcmp(kind, "ip") == 0) {
     unsigned char addr[16];
     size_t addr_len = 0;
@@ -114,21 +123,26 @@ int main(int argc, char ** argv) {
       r = gcert_x509_verify_ip(&cert, addr, addr_len);
     }
   } else {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "names: unknown kind %s\n", kind);
     return 3;
   }
   if (r == GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("match\n");
     return 0;
   }
   if (r == GCERT_ERR_MISMATCH) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("mismatch\n");
     return 1;
   }
   if (r == GCERT_ERR_INVALID) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("invalid\n");
     return 2;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   fprintf(stderr, "names: %s\n", gcert_result_string(r));
   return 3;
 }

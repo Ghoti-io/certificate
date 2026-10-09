@@ -30,8 +30,6 @@
  * P-256 or P-384. Anything else exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/security/hmac.h>
@@ -104,6 +102,7 @@ int main(int argc, char ** argv) {
   GCERT_X509 ca;
 
   if (argc != 4) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: ocsp <response.der> <issuer.der> <hexserial>\n");
     return 2;
   }
@@ -136,17 +135,23 @@ int main(int argc, char ** argv) {
    * response whose age is invisible is one that can be replayed. On stderr
    * rather than stdout, because make check-oracle reads this program's stdout
    * and compares it with OpenSSL's answer. */
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   fprintf(stderr, "produced %lld this %lld", (long long)ocsp.produced_at,
       (long long)single.this_update);
   if (single.have_next_update) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, " next %lld", (long long)single.next_update);
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   fprintf(stderr, "\n");
   if (status == GCERT_OCSP_GOOD) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("good\n");
   } else if (status == GCERT_OCSP_REVOKED) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("revoked %lld\n", (long long)when);
   } else if (status == GCERT_OCSP_UNKNOWN) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("unknown\n");
   } else {
     return 1;

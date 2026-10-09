@@ -28,8 +28,6 @@
  * printed. A wrong password exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/pkcs12.h>
@@ -79,6 +77,7 @@ int main(int argc, char ** argv) {
   const char * name;
 
   if (argc != 3) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: pkcs12 <password> <file>\n");
     return 2;
   }
@@ -109,6 +108,7 @@ int main(int argc, char ** argv) {
     gsec_wipe(scratch, sizeof scratch);
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("%s %zu\n", name, bag.cert_count);
   for (i = 0; i < bag.cert_count; i++) {
     write_hex(bag.certs[i], bag.cert_lens[i]);

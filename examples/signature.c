@@ -31,10 +31,6 @@
  * check-oracle` has OpenSSL verify what this signs and sign what this checks.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-/* check-secret: allow write -- writes the converted public certificate or signature, the example's output */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>
@@ -84,10 +80,12 @@ int main(int argc, char ** argv) {
   int found = 0;
 
   if (argc != 6) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: signature sign|verify <key.pem|cert.der> <scheme> <message> <out|signature>\n");
     return 2;
   }
   for (i = 0; i < sizeof SCHEMES / sizeof SCHEMES[0]; i++) {
+    /* check-secret: allow strcmp -- command-line words, never a secret */
     if (strcmp(SCHEMES[i].name, argv[3]) == 0) {
       scheme = SCHEMES[i].scheme;
       found = 1;
@@ -95,43 +93,52 @@ int main(int argc, char ** argv) {
   }
   if (!found || !read_file(argv[2], file_a, sizeof file_a, &a_len) ||
       !read_file(argv[4], file_m, sizeof file_m, &m_len)) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "signature: bad arguments or unreadable files\n");
     return 2;
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (strcmp(argv[1], "sign") == 0) {
     GCERT_Key * key = NULL;
     GCERT_Result r = gcert_key_from_pem(NULL, file_a, a_len, NULL, 0, NULL, &key);
     FILE * out;
     if (r != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       fprintf(stderr, "signature: %s\n", gcert_result_string(r));
       return 2;
     }
     r = gcert_key_sign(key, scheme, file_m, m_len, file_s, GCERT_SIG_MAX, &s_len);
     gcert_key_free(key);
     if (r != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       fprintf(stderr, "signature: %s\n", gcert_result_string(r));
       return 2;
     }
     out = fopen(argv[5], "wb");
+    /* check-secret: allow write -- writes the converted public certificate or signature, the example's output */
     if (out == NULL || fwrite(file_s, 1, s_len, out) != s_len) {
       return 2;
     }
     fclose(out);
     return 0;
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (strcmp(argv[1], "verify") == 0) {
     GCERT_X509 cert;
     GCERT_Result r;
     if (!read_file(argv[5], file_s, sizeof file_s, &s_len) ||
         gcert_x509_parse(file_a, a_len, &cert) != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       fprintf(stderr, "signature: cannot read the certificate or signature\n");
       return 2;
     }
     r = gcert_x509_verify_signature(&cert, scheme, file_m, m_len, file_s, s_len);
     if (r == GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       printf("valid\n");
       return 0;
     }
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("invalid\n");
     return 1;
   }

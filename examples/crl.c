@@ -28,8 +28,6 @@
  * serial is on it. Anything else exits 1.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/crl.h>
@@ -94,6 +92,7 @@ int main(int argc, char ** argv) {
   GCERT_X509 ca;
 
   if (argc != 4) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: crl <list.der> <issuer.der> <hexserial>\n");
     return 2;
   }
@@ -108,6 +107,7 @@ int main(int argc, char ** argv) {
       gcert_crl_contains(&crl, serial, serial_len) != GCERT_OK) {
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("signed %lld\n", (long long)crl.this_update);
   return 0;
 }

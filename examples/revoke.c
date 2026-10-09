@@ -30,9 +30,6 @@
  * -crl_check`.
  */
 
-/* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
-/* check-secret: allow strcmp -- command-line words, never a secret */
-
 #include <ghoti.io/certificate/macros.h>
 
 #include <ghoti.io/certificate/certificate.h>
@@ -91,22 +88,27 @@ int main(int argc, char ** argv) {
   int64_t now;
   int is_crl;
 
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   if (argc < 6 || argc > 7 || (strcmp(argv[1], "crl") != 0 && strcmp(argv[1], "ocsp") != 0)) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "usage: revoke crl|ocsp <evidence.der> <issuer.der> <cert.der> <now> [responder.der]\n");
     return 3;
   }
+  /* check-secret: allow strcmp -- command-line words, never a secret */
   is_crl = strcmp(argv[1], "crl") == 0;
   now = atoll(argv[5]);
   if (!read_file(argv[2], buf[0], &n[0]) || !read_file(argv[3], buf[1], &n[1]) ||
       !read_file(argv[4], buf[2], &n[2]) ||
       gcert_x509_parse(buf[1], n[1], &issuer) != GCERT_OK ||
       gcert_x509_parse(buf[2], n[2], &cert) != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "revoke: cannot read the inputs\n");
     return 3;
   }
   if (is_crl) {
     GCERT_Crl crl;
     if (gcert_crl_parse(buf[0], n[0], &crl) != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       printf("unusable malformed\n");
       return 2;
     }
@@ -116,10 +118,12 @@ int main(int argc, char ** argv) {
     int have_responder = argc == 7;
     if (have_responder && (!read_file(argv[6], buf[3], &n[3]) ||
         gcert_x509_parse(buf[3], n[3], &responder) != GCERT_OK)) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       fprintf(stderr, "revoke: cannot read the responder\n");
       return 3;
     }
     if (gcert_ocsp_parse(buf[0], n[0], &ocsp) != GCERT_OK) {
+      /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
       printf("unusable malformed\n");
       return 2;
     }
@@ -127,17 +131,21 @@ int main(int argc, char ** argv) {
         &out);
   }
   if (r != GCERT_OK) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     fprintf(stderr, "revoke: %s\n", gcert_result_string(r));
     return 3;
   }
   if (out.status == GCERT_REVOCATION_GOOD) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("good\n");
     return 0;
   }
   if (out.status == GCERT_REVOCATION_REVOKED) {
+    /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
     printf("revoked\n");
     return 1;
   }
+  /* check-secret: allow printf -- what the example found in a public input (a name, a count, a verdict), never a private key */
   printf("unusable %s\n", why(out.reason));
   return 2;
 }
